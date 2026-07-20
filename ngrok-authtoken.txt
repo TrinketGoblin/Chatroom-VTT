@@ -1,0 +1,17 @@
+# ============================================================
+#  NGROK AUTHTOKEN
+# ============================================================
+#
+#  Paste your ngrok authtoken on the line below, replacing
+#  the words PASTE_YOUR_NGROK_AUTHTOKEN_HERE.
+#
+#  Where to get a token: https://dashboard.ngrok.com/get-started/your-authtoken
+#  (Full sign-up steps are in README.md)
+#
+#  Then save this file (Ctrl+S) and close it. That's it --
+#  start.bat will read it automatically.
+#
+#  Lines starting with # are just notes and are ignored.
+# ============================================================
+
+PASTE_YOUR_NGROK_AUTHTOKEN_HERE
