@@ -1,0 +1,6 @@
+# Runtime-uploaded shared assets (rulebook PDF, world map)
+/public/uploads/
+/assets.json
+ 
+# Archived campaigns (created at runtime by New Game / campaign switch)
+/archives/

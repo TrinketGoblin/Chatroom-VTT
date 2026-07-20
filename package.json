@@ -1,0 +1,16 @@
+{
+  "name": "character-chat",
+  "version": "1.0.0",
+  "description": "A small self-hosted chat room where people pick a character and RP as them.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.2.0",
+    "pdfjs-dist": "^4.10.38",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.8.3"
+  }
+}

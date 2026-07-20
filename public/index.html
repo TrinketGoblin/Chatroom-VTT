@@ -1,0 +1,2692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Iron Valley — Character Chat</title>
+<style>
+/* ─── Design tokens ─────────────────────────────────────────── */
+:root {
+  --parchment: #f5ead7;
+  --parchment-dark: #ede0c4;
+  --ink: #2c1810;
+  --ink-mid: #5a3d28;
+  --ink-light: #8a6a50;
+  --panel: #fdf7ec;
+  --border: #d4b896;
+  --border-light: #e8d9c4;
+  --accent: #7a9e7e;   /* sage green */
+  --accent2: #c4923a;  /* harvest gold */
+  --accent3: #d4896a;  /* blush */
+  --danger: #b04a3d;
+  --spring: #c8e6c9;
+  --summer: #fff9c4;
+  --fall: #ffe0b2;
+  --winter: #e3f2fd;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-ui: 'Segoe UI', system-ui, sans-serif;
+  --shadow: 0 2px 12px rgba(44,24,16,0.10);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-ui);
+  background: var(--parchment);
+  color: var(--ink);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+ 
+/* ─── Header ─────────────────────────────────────────────────── */
+header {
+  background: var(--ink);
+  color: var(--parchment);
+  padding: 0 20px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.header-title {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  letter-spacing: 0.04em;
+}
+.header-right { display: flex; align-items: center; gap: 10px; }
+#onlineCount { font-size: 12px; opacity: 0.7; }
+.header-btn {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--parchment);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.header-btn:hover { background: rgba(255,255,255,0.22); }
+.campaign-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--parchment);
+}
+.campaign-selector input {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--parchment);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  width: 120px;
+  transition: all 0.15s;
+}
+.campaign-selector input:focus { outline: none; background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); }
+.campaign-selector button {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--parchment);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.campaign-selector button:hover { background: rgba(255,255,255,0.18); }
+.char-switcher-container {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+  margin-bottom: 8px;
+}
+.char-switcher-container.active { display: flex; }
+.char-switcher-label { font-size: 10px; font-weight: 600; color: var(--ink-light); text-transform: uppercase; letter-spacing: 0.04em; }
+.char-switcher-select {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+}
+ 
+/* ─── Layout ─────────────────────────────────────────────────── */
+#app { flex: 1; display: flex; overflow: hidden; }
+ 
+/* ─── Sidebar ────────────────────────────────────────────────── */
+#sidebar {
+  width: 270px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#sidebarTabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+.stab {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 11px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--ink-light);
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  user-select: none;
+}
+.stab.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.stab:hover:not(.active) { background: var(--parchment-dark); }
+ 
+.sidebar-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; padding: 12px; gap: 10px; }
+.sidebar-panel.active { display: flex; }
+ 
+/* Characters panel */
+#charList { overflow-y: auto; flex: 1; }
+.char-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  margin-bottom: 5px;
+  border: 1px solid var(--border-light);
+  background: var(--panel);
+  cursor: default;
+}
+.char-row.mine { border-color: var(--accent); background: #ecf4ec; }
+.char-row .char-name { flex: 1; font-size: 13px; font-weight: 600; }
+.char-row .char-player { font-size: 11px; color: var(--ink-light); }
+.char-type-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--parchment-dark);
+  color: var(--ink-light);
+}
+.char-type-badge.townie { background: #e8f4fd; color: #1a6898; }
+.icon-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--ink-mid);
+  white-space: nowrap;
+}
+.icon-btn:hover { background: var(--parchment-dark); }
+ 
+/* New char form */
+#newCharForm { display: none; flex-direction: column; gap: 6px; border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 2px; }
+#newCharForm input, #newCharForm select {
+  padding: 7px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  background: white;
+  color: var(--ink);
+}
+.form-row { display: flex; gap: 6px; }
+.form-row > * { flex: 1; min-width: 0; }
+.form-error { color: var(--danger); font-size: 11px; min-height: 14px; }
+ 
+/* Dice panel */
+.dice-section h4 {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  color: var(--ink-mid);
+  margin-bottom: 8px;
+}
+.dice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.dice-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 4px;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  color: var(--ink);
+  transition: all 0.15s;
+}
+.dice-btn:hover { background: var(--parchment-dark); border-color: var(--accent2); }
+.dice-btn span { display: block; font-size: 10px; color: var(--ink-light); margin-top: 1px; }
+.custom-dice { display: flex; gap: 6px; align-items: center; }
+.custom-dice input {
+  width: 56px;
+  padding: 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  text-align: center;
+  background: white;
+}
+#rngResult {
+  text-align: center;
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--accent);
+  min-height: 40px;
+  margin: 4px 0;
+}
+#rngLabel { text-align: center; font-size: 11px; color: var(--ink-light); min-height: 14px; }
+ 
+/* Oracle panel */
+.oracle-result {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  min-height: 48px;
+  color: var(--ink);
+  text-align: center;
+}
+.oracle-sub { font-size: 11px; color: var(--ink-light); text-align: center; margin-top: 4px; }
+.oracle-tables { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+.oracle-tables h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-light); margin-bottom: 2px; }
+ 
+/* ─── Main chat area ─────────────────────────────────────────── */
+#main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#messages { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 2px; }
+.msg { max-width: 72%; }
+.msg .who {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.msg .bubble {
+  background: var(--panel);
+  border: 1px solid var(--border-light);
+  border-radius: 0 10px 10px 10px;
+  padding: 8px 12px;
+  white-space: pre-wrap;
+  line-height: 1.45;
+  font-size: 14px;
+}
+.msg.mine .bubble { background: #ecf4ec; border-color: #b8d9b8; border-radius: 10px 0 10px 10px; }
+.system-msg {
+  text-align: center;
+  color: var(--ink-light);
+  font-size: 11px;
+  padding: 3px 0;
+  font-style: italic;
+}
+.dice-msg {
+  text-align: center;
+  font-size: 13px;
+  padding: 5px 0;
+}
+.dice-val {
+  display: inline-block;
+  background: var(--parchment-dark);
+  border: 1px solid var(--accent2);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--accent2);
+  margin-left: 4px;
+}
+.oracle-msg { text-align: center; font-style: italic; color: var(--ink-mid); font-size: 13px; padding: 4px 0; }
+.oracle-msg .oracle-answer {
+  display: inline-block;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 12px;
+  font-style: normal;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+}
+#composer {
+  border-top: 1px solid var(--border);
+  padding: 10px 14px;
+  display: flex;
+  gap: 8px;
+  background: var(--panel);
+  flex-shrink: 0;
+}
+#composer textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  height: 44px;
+  background: white;
+  color: var(--ink);
+  transition: border-color 0.15s;
+}
+#composer textarea:focus { outline: none; border-color: var(--accent); }
+#sendBtn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+#sendBtn:hover { background: #5f8462; }
+ 
+/* ─── Overlays ───────────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(44,24,16,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.modal {
+  background: var(--panel);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  max-height: 90vh;
+  overflow-y: auto;
+  width: 100%;
+}
+.modal-header {
+  background: var(--ink);
+  color: var(--parchment);
+  padding: 14px 20px;
+  border-radius: 14px 14px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-header h2 { font-family: var(--font-serif); font-size: 18px; }
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--parchment);
+  font-size: 20px;
+  cursor: pointer;
+  opacity: 0.7;
+  line-height: 1;
+}
+.modal-close:hover { opacity: 1; }
+.modal-body { padding: 20px; }
+.hidden { display: none !important; }
+ 
+/* ─── Rulebook (PDF) + Map viewers ───────────────────────────── */
+#rulebookModal, #mapModal { max-width: 960px; }
+.asset-empty { text-align: center; padding: 30px 10px; color: var(--ink-mid); }
+.asset-empty p { margin-bottom: 6px; }
+.pdf-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.pdf-toolbar #pdfPageInfo { font-size: 13px; color: var(--ink-mid); min-width: 90px; text-align: center; }
+.pdf-btn { width: auto; padding: 6px 12px; font-size: 13px; }
+.pdf-canvas-wrap {
+  background: var(--parchment-dark);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  max-height: 68vh;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+}
+#pdfCanvas { max-width: 100%; height: auto; box-shadow: var(--shadow); background: white; }
+.map-wrap {
+  background: var(--parchment-dark);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  max-height: 74vh;
+  overflow: auto;
+  text-align: center;
+}
+#mapImage { max-width: 100%; height: auto; border-radius: 4px; box-shadow: var(--shadow); }
+ 
+/* ─── Join overlay ───────────────────────────────────────────── */
+#joinModal { max-width: 360px; }
+#joinModal .modal-body { display: flex; flex-direction: column; gap: 10px; }
+#joinModal input, #joinModal select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  background: white;
+}
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  width: 100%;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: #5f8462; }
+.btn-secondary {
+  background: var(--parchment-dark);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+.btn-secondary:hover { background: var(--border); }
+#joinError { color: var(--danger); font-size: 12px; min-height: 16px; }
+#joinInfo { color: var(--ink-mid); font-size: 12px; min-height: 16px; }
+ 
+/* ─── Sheet modal ────────────────────────────────────────────── */
+#sheetModal { max-width: 560px; }
+ 
+/* Section headers */
+.sheet-section {
+  margin-bottom: 16px;
+}
+.sheet-section-title {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-light);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sheet-field label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-light);
+  margin-bottom: 3px;
+}
+.sheet-field input, .sheet-field textarea, .sheet-field select {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  background: white;
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+.sheet-field textarea { resize: vertical; min-height: 60px; }
+.sheet-grid { display: grid; gap: 10px; }
+.sheet-grid.cols2 { grid-template-columns: 1fr 1fr; }
+.sheet-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+ 
+/* Stats */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.stat-box {
+  text-align: center;
+}
+.stat-box label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-light);
+  margin-bottom: 4px;
+}
+.stat-box input {
+  width: 100%;
+  text-align: center;
+  padding: 8px 2px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  font-size: 18px;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  background: white;
+  color: var(--ink);
+  transition: border-color 0.15s;
+}
+.stat-box input:focus { outline: none; border-color: var(--accent); }
+ 
+/* Satisfaction */
+.satisfaction-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.satisfaction-row label { font-size: 12px; color: var(--ink-mid); min-width: 90px; }
+.satisfaction-row input {
+  width: 64px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  text-align: center;
+  background: white;
+}
+.sat-costs { font-size: 11px; color: var(--ink-light); }
+ 
+/* Skills */
+.skills-list { display: flex; flex-direction: column; gap: 6px; }
+.skill-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--parchment);
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+}
+.skill-name { flex: 1; font-size: 13px; }
+.skill-ticks { display: flex; gap: 4px; }
+.skill-tick {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  background: white;
+  transition: all 0.1s;
+  user-select: none;
+}
+.skill-tick.t1.active { background: #ecf4ec; border-color: var(--accent); }
+.skill-tick.t2.active { background: #e8f0ff; border-color: #4a7fd4; }
+.skill-tick.t3.active { background: #fff3e0; border-color: var(--accent2); }
+.skill-labels { display: flex; gap: 4px; }
+.skill-label { width: 22px; font-size: 8px; text-align: center; color: var(--ink-light); line-height: 1.2; }
+.skill-delete { background: none; border: none; color: var(--ink-light); cursor: pointer; font-size: 14px; padding: 2px; opacity: 0.5; }
+.skill-delete:hover { opacity: 1; color: var(--danger); }
+.skill-add { display: flex; gap: 6px; margin-top: 6px; }
+.skill-add input { flex: 1; padding: 7px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; background: white; }
+.skill-add button { padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); cursor: pointer; font-size: 12px; }
+ 
+/* Promises */
+.promises-list { display: flex; flex-direction: column; gap: 8px; }
+.promise-card {
+  background: var(--parchment);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.promise-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.promise-name-input {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-bottom: 1px dashed var(--border);
+  background: transparent;
+  padding: 2px 4px;
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+.promise-name-input:focus { outline: none; border-bottom-color: var(--accent); }
+.promise-delete { background: none; border: none; color: var(--ink-light); cursor: pointer; font-size: 13px; opacity: 0.5; }
+.promise-delete:hover { opacity: 1; color: var(--danger); }
+.promise-boxes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.promise-box {
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  padding: 3px;
+  background: white;
+  transition: all 0.1s;
+  user-select: none;
+}
+.promise-box.complete { border-color: var(--accent); background: #ecf4ec; }
+.promise-tick { border-radius: 2px; background: var(--border-light); transition: background 0.1s; }
+.promise-tick.filled { background: var(--accent); }
+.promise-box.complete .promise-tick.filled { background: var(--accent2); }
+.promise-notes-input {
+  width: 100%;
+  font-size: 11px;
+  border: none;
+  border-top: 1px dashed var(--border);
+  background: transparent;
+  padding: 4px 2px;
+  color: var(--ink-light);
+  font-family: var(--font-ui);
+  resize: none;
+  min-height: 28px;
+}
+.promise-notes-input:focus { outline: none; }
+.promise-footer { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.promise-size-btn {
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--ink-light);
+}
+.promise-size-btn:hover { background: var(--parchment-dark); }
+.promise-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  align-items: center;
+}
+.promise-add input { flex: 1; padding: 7px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; background: white; }
+.promise-add select { padding: 7px; border-radius: 6px; border: 1px solid var(--border); font-size: 11px; background: white; color: var(--ink); }
+.promise-add button { padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); cursor: pointer; font-size: 12px; white-space: nowrap; }
+ 
+/* Townie sheet */
+.hearts-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.heart-btn {
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.1s;
+  user-select: none;
+}
+.heart-btn:hover { transform: scale(1.2); }
+.favor-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.favor-row label { font-size: 12px; color: var(--ink-mid); }
+.favor-row input { width: 60px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 14px; text-align: center; background: white; }
+.favor-row .favor-btns { display: flex; gap: 4px; }
+.favor-btns button {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.favor-btns button:hover { background: var(--parchment-dark); }
+ 
+/* Sheet save row */
+.sheet-save-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+.sheet-save-row button { min-width: 90px; }
+ 
+/* ─── New Game modal ─────────────────────────────────────────── */
+#newGameModal { max-width: 420px; }
+#newGameModal .modal-body { display: flex; flex-direction: column; gap: 14px; }
+.warning-box {
+  background: #fff8e1;
+  border: 1px solid #f9c74f;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  color: #7a5c00;
+}
+.warning-box strong { display: block; margin-bottom: 4px; }
+.btn-danger {
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+.btn-danger:hover { background: #8e3a30; }
+ 
+/* ─── World Truths modal ─────────────────────────────────────── */
+#worldModal { max-width: 480px; }
+#worldModal .modal-body { display: flex; flex-direction: column; gap: 10px; }
+ 
+/* ─── Calendar modal ─────────────────────────────────────────── */
+#calendarModal { max-width: 720px; }
+.cal-today {
+  background: var(--parchment);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cal-today button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+.cal-today button:hover { background: #5f8462; }
+.cal-season-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.cal-season-tab {
+  flex: 1;
+  min-width: 70px;
+  text-align: center;
+  padding: 7px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: var(--panel);
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--ink-mid);
+}
+.cal-season-tab.active { background: var(--ink); color: var(--parchment); border-color: var(--ink); }
+.cal-season-tab.spring.active { background: var(--spring); color: var(--ink); border-color: var(--spring); }
+.cal-season-tab.summer.active { background: var(--summer); color: var(--ink); border-color: var(--summer); }
+.cal-season-tab.fall.active { background: var(--fall); color: var(--ink); border-color: var(--fall); }
+.cal-season-tab.winter.active { background: var(--winter); color: var(--ink); border-color: var(--winter); }
+.cal-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.cal-weekday-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-light); text-align: center; padding-bottom: 2px; }
+.cal-day {
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 92px;
+}
+.cal-day.today { border-color: var(--accent2); background: #fdf3e0; box-shadow: 0 0 0 1px var(--accent2); }
+.cal-day-head { display: flex; align-items: center; justify-content: space-between; }
+.cal-day-num { font-family: var(--font-serif); font-weight: 700; font-size: 13px; }
+.cal-star-btn { background: none; border: none; cursor: pointer; font-size: 13px; opacity: 0.45; line-height: 1; padding: 0; }
+.cal-star-btn:hover { opacity: 1; }
+.cal-day.today .cal-star-btn { opacity: 1; color: var(--accent2); }
+.cal-label-input {
+  width: 100%;
+  font-size: 10px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--ink-mid);
+  font-family: var(--font-ui);
+  resize: none;
+  min-height: 26px;
+}
+.cal-label-input:focus { outline: none; background: white; border-radius: 3px; }
+.cal-ticks { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 2px; margin-top: auto; }
+.cal-tick { height: 10px; border-radius: 2px; background: var(--border-light); cursor: pointer; }
+.cal-tick.filled { background: var(--accent); }
+.cal-day.day-over .cal-tick.filled { background: var(--danger); }
+ 
+/* ─── Scrollbars ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-light); }
+ 
+/* ─── Utility ────────────────────────────────────────────────── */
+.full-btn {
+  width: 100%;
+  padding: 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+.full-btn:hover { background: #5f8462; }
+.full-btn.secondary { background: var(--panel); color: var(--ink); }
+.full-btn.secondary:hover { background: var(--parchment-dark); }
+ 
+/* ─── Delete (danger) icon button ────────────────────────────── */
+.icon-btn.danger { border-color: var(--danger); color: var(--danger); }
+.icon-btn.danger:hover { background: #f7e3e0; }
+ 
+/* ─── Campaigns modal ────────────────────────────────────────── */
+#campaignsModal { max-width: 460px; }
+.campaign-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: var(--panel);
+}
+.campaign-item.active { border-color: var(--accent); background: #ecf4ec; }
+.campaign-item .campaign-name { font-weight: 600; font-size: 14px; }
+.campaign-item .campaign-meta { font-size: 11px; color: var(--ink-light); }
+ 
+/* ─── Per-player favor cards (townie sheet) ──────────────────── */
+.rel-card {
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--panel);
+}
+.rel-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.rel-head .rel-name { font-weight: 600; font-size: 13px; }
+ 
+/* ─── Mobile sidebar drawer ──────────────────────────────────── */
+.hamburger-btn {
+  display: none;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--parchment);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  margin-right: 4px;
+}
+#sidebarBackdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(44,24,16,0.5);
+  z-index: 40;
+}
+#sidebarBackdrop.show { display: block; }
+ 
+/* ─── Phone / small-screen layout ────────────────────────────── */
+@media (max-width: 720px) {
+  header {
+    height: auto;
+    min-height: 48px;
+    flex-wrap: wrap;
+    padding: 6px 10px;
+    gap: 6px;
+  }
+  .header-title { font-size: 15px; }
+  .hamburger-btn { display: inline-block; }
+  /* The header selector is redundant on phones — the Campaigns modal covers it. */
+  .campaign-selector { display: none; }
+  .header-right { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .header-right #onlineCount { order: -1; }
+  .header-btn { padding: 5px 9px; font-size: 12px; }
+ 
+  /* Sidebar becomes a slide-in drawer over the chat. */
+  #sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 84%;
+    max-width: 320px;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 2px 0 16px rgba(44,24,16,0.25);
+  }
+  #sidebar.open { transform: translateX(0); }
+  #main { width: 100%; }
+  #messages { padding: 12px 12px; }
+  .msg { max-width: 88%; }
+ 
+  /* Modals go near-fullscreen and single-column. */
+  .overlay { padding: 8px; align-items: flex-start; }
+  .modal { max-height: 94vh; border-radius: 10px; }
+  .modal-body { padding: 14px; }
+  .sheet-grid.cols2 { grid-template-columns: 1fr; }
+  .sheet-save-row { flex-wrap: wrap; }
+  .sheet-save-row button { min-width: 0; flex: 1; }
+  .dice-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+ 
+<!-- ═══════════════════ JOIN OVERLAY ═══════════════════════════ -->
+<div class="overlay" id="joinOverlay">
+  <div class="modal" id="joinModal">
+    <div class="modal-header">
+      <h2>🍂 Iron Valley</h2>
+    </div>
+    <div class="modal-body">
+      <div id="worldSummary" style="background:var(--parchment);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;color:var(--ink-mid);display:none;"></div>
+      <input id="playerName" placeholder="Your name" maxlength="30" />
+      <select id="characterSelect"></select>
+      <div id="joinError"></div>
+      <div id="joinInfo"></div>
+      <button class="btn-primary" id="joinBtn">Enter the Valley</button>
+      <button class="btn-secondary" id="newPlayerSlotBtn" onclick="quickJoinNewPlayer()">🧍 New to town? Create a player slot</button>
+    </div>
+  </div>
+</div>
+ 
+<!-- ═══════════════════ SHEET MODAL ════════════════════════════ -->
+<div class="overlay hidden" id="sheetOverlay">
+  <div class="modal" id="sheetModal">
+    <div class="modal-header">
+      <h2 id="sheetTitle">Character Sheet</h2>
+      <button class="modal-close" id="sheetCloseTop">✕</button>
+    </div>
+    <div class="modal-body" id="sheetBody">
+      <!-- Injected by JS based on character type -->
+    </div>
+  </div>
+</div>
+ 
+<!-- ═══════════════════ WORLD MODAL ════════════════════════════ -->
+<div class="overlay hidden" id="worldOverlay">
+  <div class="modal" id="worldModal">
+    <div class="modal-header">
+      <h2>🌍 World Truths</h2>
+      <button class="modal-close" onclick="closeWorld()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="sheet-field"><label>Town Name</label><input id="wTownName" /></div>
+      <div class="sheet-field"><label>What is Iron Valley?</label><input id="wIronValleyIs" /></div>
+      <div class="sheet-field"><label>What kind of people live there?</label><input id="wPeopleAre" /></div>
+      <div class="sheet-field"><label>Is there magic in this world?</label><input id="wMagicIs" /></div>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button class="btn-secondary" onclick="closeWorld()" style="flex:1;">Cancel</button>
+        <button class="btn-primary" onclick="saveWorld()" style="flex:1;">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+<!-- ═══════════════════ CALENDAR MODAL ═════════════════════════ -->
+<div class="overlay hidden" id="calendarOverlay">
+  <div class="modal" id="calendarModal">
+    <div class="modal-header">
+      <h2>📅 The Calendar</h2>
+      <button class="modal-close" onclick="closeCalendar()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="calToday" class="cal-today"></div>
+      <div id="calSeasonTabs" class="cal-season-tabs"></div>
+      <div id="calGrid" class="cal-grid"></div>
+      <p style="font-size:11px;color:var(--ink-light);margin-top:10px;">
+        Click a tick to mark progress on that day (max 4 — the 4th tick ends the day).
+        Click ☆ to jump the current-day marker to that day. Holiday labels are free text — edit any of them.
+      </p>
+    </div>
+  </div>
+</div>
+ 
+<!-- ═══════════════════ NEW GAME MODAL ═════════════════════════ -->
+<div class="overlay hidden" id="newGameOverlay">
+  <div class="modal" id="newGameModal">
+    <div class="modal-header">
+      <h2>🌱 New Campaign</h2>
+      <button class="modal-close" onclick="closeNewGame()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="warning-box">
+        <strong>⚠️ This will archive the current campaign.</strong>
+        All characters, sheets, and the world will be saved to an archive folder with a timestamp.
+        The chat will reset. Your old campaigns are never deleted — only archived.
+      </div>
+      <p style="font-size:13px;color:var(--ink-mid);">After archiving, you'll set up the World Truths for the new campaign.</p>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="closeNewGame()" style="flex:1;">Cancel</button>
+        <button class="btn-danger" onclick="confirmNewGame()" style="flex:1;">Archive & Start Fresh</button>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+<!-- ═══════════════════ CAMPAIGNS MODAL ════════════════════════ -->
+<div class="overlay hidden" id="campaignsOverlay">
+  <div class="modal" id="campaignsModal">
+    <div class="modal-header">
+      <h2>📂 Campaigns</h2>
+      <button class="modal-close" onclick="closeCampaigns()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="sheet-field">
+        <label>Active campaign name</label>
+        <div class="form-row">
+          <input id="campaignRenameInput" placeholder="Campaign name…" maxlength="60" />
+          <button class="btn-secondary" style="flex:0 0 auto;width:auto;padding:8px 14px;" onclick="renameCampaign()">Rename</button>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="sheet-section-title">Saved campaigns</div>
+        <p style="font-size:12px;color:var(--ink-light);margin-bottom:8px;">
+          Loading a saved campaign archives the current one first, then swaps in its characters, world &amp; calendar. The rulebook and map are shared across all campaigns.
+        </p>
+        <div id="campaignsList"></div>
+      </div>
+      <div id="campaignsError" class="form-error"></div>
+    </div>
+  </div>
+</div>
+ 
+<!-- ═══════════════════ RULEBOOK MODAL ═════════════════════════ -->
+<div class="overlay hidden" id="rulebookOverlay">
+  <div class="modal" id="rulebookModal">
+    <div class="modal-header">
+      <h2>📖 Rulebook</h2>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label class="header-btn" for="rulebookFile" style="color:var(--parchment);">⬆️ Upload PDF</label>
+        <input type="file" id="rulebookFile" accept="application/pdf,.pdf" style="display:none;" onchange="uploadRulebook(this)" />
+        <button class="modal-close" onclick="closeRulebook()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="rulebookEmpty" class="asset-empty">
+        <p>No rulebook uploaded yet.</p>
+        <p style="font-size:12px;color:var(--ink-light);">Upload a PDF and everyone at the table can read it here.</p>
+        <label class="btn-primary" for="rulebookFile" style="display:inline-block;width:auto;padding:10px 18px;margin-top:10px;">⬆️ Upload a PDF</label>
+      </div>
+      <div id="rulebookViewer" style="display:none;">
+        <div class="pdf-toolbar">
+          <button class="btn-secondary pdf-btn" onclick="pdfPrev()">‹ Prev</button>
+          <span id="pdfPageInfo">Page 1 / 1</span>
+          <button class="btn-secondary pdf-btn" onclick="pdfNext()">Next ›</button>
+          <span style="width:12px;"></span>
+          <button class="btn-secondary pdf-btn" onclick="pdfZoom(-0.2)">−</button>
+          <button class="btn-secondary pdf-btn" onclick="pdfZoom(0.2)">+</button>
+        </div>
+        <div class="pdf-canvas-wrap"><canvas id="pdfCanvas"></canvas></div>
+      </div>
+      <div id="rulebookError" class="form-error"></div>
+    </div>
+  </div>
+</div>
+ 
+<!-- ═══════════════════ MAP MODAL ══════════════════════════════ -->
+<div class="overlay hidden" id="mapOverlay">
+  <div class="modal" id="mapModal">
+    <div class="modal-header">
+      <h2>🗺️ World Map</h2>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label class="header-btn" for="mapFile" style="color:var(--parchment);">⬆️ Upload Image</label>
+        <input type="file" id="mapFile" accept="image/*" style="display:none;" onchange="uploadMap(this)" />
+        <button class="modal-close" onclick="closeMap()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="mapEmpty" class="asset-empty">
+        <p>No map uploaded yet.</p>
+        <p style="font-size:12px;color:var(--ink-light);">Upload a PNG (or other image) of your world map for everyone to see.</p>
+        <label class="btn-primary" for="mapFile" style="display:inline-block;width:auto;padding:10px 18px;margin-top:10px;">⬆️ Upload an image</label>
+      </div>
+      <div id="mapViewer" class="map-wrap" style="display:none;">
+        <img id="mapImage" alt="World map" />
+      </div>
+      <div id="mapError" class="form-error"></div>
+    </div>
+  </div>
+</div>
+ 
+<!-- ═══════════════════ MAIN UI ════════════════════════════════ -->
+<header>
+  <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" title="Menu" aria-label="Toggle sidebar">☰</button>
+  <span class="header-title">🍂 Iron Valley</span>
+  <div class="campaign-selector" id="campaignSelector">
+    <span>📂</span>
+    <input id="campaignName" type="text" placeholder="Campaign name…" title="Active campaign name" />
+    <button id="saveCampaignBtn" onclick="saveCampaignName()" title="Save campaign name">💾</button>
+  </div>
+  <div class="header-right">
+    <span id="onlineCount">0 online</span>
+    <button class="header-btn" onclick="openCampaigns()">📂 Campaigns</button>
+    <button class="header-btn" onclick="openRulebook()">📖 Rulebook</button>
+    <button class="header-btn" onclick="openMap()">🗺️ Map</button>
+    <button class="header-btn" onclick="openCalendar()">📅 Calendar</button>
+    <button class="header-btn" onclick="openWorld()">🌍 World</button>
+    <button class="header-btn" onclick="openNewGame()">🌱 New Game</button>
+  </div>
+</header>
+ 
+<div id="app">
+  <!-- Backdrop shown behind the sidebar drawer on phones -->
+  <div id="sidebarBackdrop" onclick="closeSidebar()"></div>
+  <!-- ── Sidebar ───────────────────── -->
+  <div id="sidebar">
+    <div id="sidebarTabs">
+      <div class="stab active" onclick="switchTab('chars')">👥 Cast</div>
+      <div class="stab" onclick="switchTab('dice')">🎲 Dice</div>
+      <div class="stab" onclick="switchTab('oracle')">🌿 Oracle</div>
+    </div>
+ 
+    <!-- Characters tab -->
+    <div class="sidebar-panel active" id="tab-chars">
+      <div class="char-switcher-container" id="charSwitcherContainer">
+        <div class="char-switcher-label">Quick Switch</div>
+        <select class="char-switcher-select" id="charSwitcher" onchange="quickSwitchCharacter()">
+          <option value="">Select a character…</option>
+        </select>
+      </div>
+      <div id="charList"></div>
+      <button class="full-btn" id="quickJoinBtn" onclick="quickAddPlayer()" style="margin-bottom:6px;">🧍 New Blank Player Slot</button>
+      <button class="full-btn secondary" id="newCharBtn" onclick="toggleNewCharForm()">+ Add Character</button>
+      <div id="newCharForm">
+        <div class="form-row">
+          <input id="newCharName" placeholder="Name" maxlength="30" />
+          <input id="newCharEmoji" placeholder="🐾" maxlength="4" style="max-width:64px;" />
+        </div>
+        <div class="form-row">
+          <select id="newCharType">
+            <option value="player">Player Character</option>
+            <option value="townie">Townie / NPC</option>
+          </select>
+          <input id="newCharColor" type="color" value="#6b7fcd" style="max-width:44px;padding:2px;" />
+        </div>
+        <div class="form-error" id="newCharError"></div>
+        <div class="form-row">
+          <button class="full-btn secondary" onclick="cancelNewChar()">Cancel</button>
+          <button class="full-btn" onclick="createChar()">Create</button>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Dice tab -->
+    <div class="sidebar-panel" id="tab-dice">
+      <div class="dice-section">
+        <h4>Quick Roll</h4>
+        <div class="dice-grid">
+          <button class="dice-btn" onclick="quickRoll(1,6)">🎲 d6<span>1–6</span></button>
+          <button class="dice-btn" onclick="quickRoll(1,10)">🎲 d10<span>1–10</span></button>
+          <button class="dice-btn" onclick="quickRoll(1,100)">🎲 d100<span>1–100</span></button>
+          <button class="dice-btn" onclick="spiritRoll()">🌿 Spirit<span>Yes / No</span></button>
+        </div>
+        <h4 style="margin-bottom:6px;">Custom</h4>
+        <div class="custom-dice">
+          <input id="rngMin" type="number" value="1" min="1" />
+          <span style="color:var(--ink-light);font-size:12px;">to</span>
+          <input id="rngMax" type="number" value="20" min="1" />
+          <button class="full-btn" style="flex:1;" onclick="customRoll()">Roll</button>
+        </div>
+      </div>
+      <div id="rngResult"></div>
+      <div id="rngLabel"></div>
+    </div>
+ 
+    <!-- Oracle tab -->
+    <div class="sidebar-panel" id="tab-oracle">
+      <div class="oracle-tables" style="flex:1;">
+        <h4>Most Used</h4>
+        <button class="full-btn" onclick="rollOracle('ask')">🌿 Ask the Spirit</button>
+        <button class="full-btn secondary" onclick="rollOracle('action')">⚡ Action</button>
+        <button class="full-btn secondary" onclick="rollOracle('theme')">🌙 Theme</button>
+        <button class="full-btn secondary" onclick="rollOracle('descriptor')">✨ Descriptor</button>
+        <button class="full-btn secondary" onclick="rollOracle('focus')">🎯 Focus</button>
+        <button class="full-btn secondary" onclick="rollOracle('weather')">🌤 Weather</button>
+        <button class="full-btn secondary" onclick="rollOracle('storyHook')">📖 Story Hook</button>
+        <button class="full-btn secondary" onclick="rollOracle('heartEvent')">💌 Heart Event</button>
+        <button class="full-btn secondary" onclick="rollOracle('requests')">🙏 Townie Request</button>
+        <button class="full-btn secondary" onclick="rollOracle('date')">📅 Random Date</button>
+ 
+        <h4>Townies</h4>
+        <button class="full-btn secondary" onclick="rollOracle('ancestry')">🐾 Ancestry / Species</button>
+        <button class="full-btn secondary" onclick="rollOracle('names')">🏷️ Townie Name</button>
+        <button class="full-btn secondary" onclick="rollOracle('job')">💼 Job / Role</button>
+        <button class="full-btn secondary" onclick="rollOracle('age')">🎂 Age</button>
+        <button class="full-btn secondary" onclick="rollOracle('pronouns')">🔤 Pronouns</button>
+        <button class="full-btn secondary" onclick="rollOracle('presentation')">🎭 Gender Presentation</button>
+        <button class="full-btn secondary" onclick="rollOracle('traits')">🌟 Trait</button>
+        <button class="full-btn secondary" onclick="rollOracle('charm')">💎 Charm Point</button>
+        <button class="full-btn secondary" onclick="rollOracle('hobby')">🎨 Hobby</button>
+        <button class="full-btn secondary" onclick="rollOracle('relationship')">💞 Relationship</button>
+        <button class="full-btn secondary" onclick="rollOracle('favoriteResource')">🌾 Favorite Resource</button>
+        <button class="full-btn secondary" onclick="rollOracle('favoriteItem')">🎁 Favorite Item</button>
+        <button class="full-btn secondary" onclick="rollOracle('favoriteGame')">🎮 Favorite Video Game</button>
+ 
+        <h4>World & Story</h4>
+        <button class="full-btn secondary" onclick="rollOracle('location')">📍 Location</button>
+        <button class="full-btn secondary" onclick="rollOracle('townName')">🏘️ Town Name</button>
+        <button class="full-btn secondary" onclick="rollOracle('crops')">🌱 Crop</button>
+        <button class="full-btn secondary" onclick="rollOracle('livestock')">🐄 Livestock</button>
+        <button class="full-btn secondary" onclick="rollOracle('color')">🎨 Color</button>
+        <button class="full-btn secondary" onclick="rollOracle('fleaMarket')">🏺 Flea Market Find</button>
+        <button class="full-btn secondary" onclick="rollOracle('rubbish')">🗑️ Rubbish</button>
+        <button class="full-btn secondary" onclick="rollOracle('items')">🎒 Random Item</button>
+        <button class="full-btn secondary" onclick="rollOracle('food')">🍽️ Random Food</button>
+        <button class="full-btn secondary" onclick="rollOracle('skill')">🪄 Random Skill</button>
+ 
+        <h4>Creation</h4>
+        <button class="full-btn secondary" onclick="rollOracle('plushie')">🧸 Plushie Creator</button>
+        <button class="full-btn secondary" onclick="rollOracle('creature')">🐉 Creature Creator</button>
+        <button class="full-btn secondary" onclick="rollOracle('statArray')">🎲 Stat Array</button>
+      </div>
+      <div id="oracleResult" class="oracle-result" style="margin-top:8px;"></div>
+      <div id="oracleSub" class="oracle-sub"></div>
+    </div>
+  </div>
+ 
+  <!-- ── Chat area ───────────────── -->
+  <div id="main">
+    <div id="messages"></div>
+    <div id="composer">
+      <textarea id="textInput" placeholder="Say something in character… (Enter to send, Shift+Enter for new line)"></textarea>
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+</div>
+ 
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  Iron Valley Character Chat — client
+// ═══════════════════════════════════════════════════════════════
+ 
+const socket = io();
+ 
+let myCharacter = null;
+let charactersData = [];
+let worldData = {};
+let assetsData = { rulebook: null, map: null };
+ 
+const $ = id => document.getElementById(id);
+ 
+// ── Shared helpers ───────────────────────────────────────────────
+const STATS = ['Edge', 'Heart', 'Iron', 'Shadow', 'Wits'];
+const SEASONS = ['spring', 'summer', 'fall', 'winter'];
+ 
+// Capitalize the first letter of a word.
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+ 
+// Clamp a number into an inclusive range.
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+ 
+// Roll a d100 (1–100).
+const d100 = () => Math.floor(Math.random() * 100) + 1;
+ 
+// Cycle a tick control: clicking the currently-highest tick backs off by one,
+// otherwise jump to the clicked position. Shared by promise boxes and calendar days.
+const cycleTick = (current, target) => (current === target ? target - 1 : target);
+ 
+// The Spirit of the Forest / Ask oracle yes-no ladder for a d100 roll.
+function yesNoOracle(n) {
+  if (n <= 2) return 'No — and it complicates things.';
+  if (n <= 49) return 'No.';
+  if (n <= 51) return "You're asking the wrong question.";
+  if (n <= 98) return 'Yes.';
+  return 'Yes — and it complicates things.';
+}
+ 
+// Overlay visibility.
+const showOverlay = id => $(id).classList.remove('hidden');
+const hideOverlay = id => $(id).classList.add('hidden');
+ 
+// ── Mobile sidebar drawer ─────────────────────────────────────
+function openSidebar() {
+  $('sidebar').classList.add('open');
+  $('sidebarBackdrop').classList.add('show');
+}
+function closeSidebar() {
+  $('sidebar').classList.remove('open');
+  $('sidebarBackdrop').classList.remove('show');
+}
+function toggleSidebar() {
+  if ($('sidebar').classList.contains('open')) closeSidebar();
+  else openSidebar();
+}
+ 
+// JSON fetch wrapper — sets the JSON content-type and serializes the body when one is given.
+function apiFetch(url, method = 'GET', body) {
+  const opts = { method };
+  if (body !== undefined) {
+    opts.headers = { 'Content-Type': 'application/json' };
+    opts.body = JSON.stringify(body);
+  }
+  return fetch(url, opts);
+}
+ 
+// ── Persistent Storage ───────────────────────────────────────────
+const STORAGE_CAMPAIGN_NAME = 'ironvalley_campaign';
+const STORAGE_CAMPAIGN_DATA = 'ironvalley_campaign_data';
+const STORAGE_PLAYER_NAME = 'ironvalley_player';
+ 
+function loadPlayerName() {
+  return localStorage.getItem(STORAGE_PLAYER_NAME) || '';
+}
+ 
+function savePlayerName(name) {
+  if (name) localStorage.setItem(STORAGE_PLAYER_NAME, name);
+}
+ 
+function loadCampaignName() {
+  return localStorage.getItem(STORAGE_CAMPAIGN_NAME) || 'Default Campaign';
+}
+ 
+// Keep the local mirror + header field in step with the server's campaign name.
+// Per-campaign data (last character) is keyed by this name, so a switch to a
+// different campaign naturally starts a fresh per-campaign slot.
+function syncCampaignName(name) {
+  if (!name) return;
+  localStorage.setItem(STORAGE_CAMPAIGN_NAME, name);
+  if ($('campaignName') && document.activeElement !== $('campaignName')) {
+    $('campaignName').value = name;
+  }
+}
+ 
+// Persist the active campaign's name to the server so everyone sees it.
+async function saveCampaignName() {
+  const name = $('campaignName').value.trim();
+  if (!name) return;
+  try {
+    const res = await apiFetch('/api/campaign', 'PUT', { name });
+    if (res.ok) syncCampaignName(name);
+  } catch { /* header field keeps the typed value; retry on next save */ }
+}
+ 
+function loadCampaignData(campaignName) {
+  const all = JSON.parse(localStorage.getItem(STORAGE_CAMPAIGN_DATA) || '{}');
+  return all[campaignName] || {};
+}
+ 
+function saveCampaignData(campaignName, data) {
+  const all = JSON.parse(localStorage.getItem(STORAGE_CAMPAIGN_DATA) || '{}');
+  all[campaignName] = data;
+  localStorage.setItem(STORAGE_CAMPAIGN_DATA, JSON.stringify(all));
+}
+ 
+function getSavedCharacter(campaignName) {
+  const data = loadCampaignData(campaignName);
+  return data.lastCharacter || null;
+}
+ 
+function setSavedCharacter(campaignName, characterName) {
+  const data = loadCampaignData(campaignName);
+  data.lastCharacter = characterName;
+  saveCampaignData(campaignName, data);
+}
+ 
+function initializePersistentUI() {
+  const campaignName = loadCampaignName();
+  $('campaignName').value = campaignName;
+  const savedPlayer = loadPlayerName();
+  if (savedPlayer) $('playerName').value = savedPlayer;
+}
+ 
+// Once we've received the character list, if the last session's player + character
+// are known and the slot is still free, rejoin automatically on reload.
+let autoRejoinTried = false;
+function maybeAutoRejoin() {
+  if (autoRejoinTried || myCharacter) return;
+  const campaignName = loadCampaignName();
+  const savedChar = getSavedCharacter(campaignName);
+  const savedPlayer = loadPlayerName();
+  if (!savedChar || !savedPlayer) return;
+  const match = charactersData.find(c => c.name === savedChar);
+  if (!match) return;                 // character no longer exists
+  if (match.claimedBy && match.claimedBy !== savedPlayer) return; // someone else has it
+  autoRejoinTried = true;
+  socket.emit('join', { playerName: savedPlayer, characterName: savedChar });
+}
+ 
+// ── Oracle tables ────────────────────────────────────────────
+const ORACLES = {
+  ask: [
+    ...Array(2).fill("No — and it complicates things."),
+    ...Array(47).fill("No."),
+    "You're asking the wrong question.",
+    "You're asking the wrong question.",
+    ...Array(47).fill("Yes."),
+    ...Array(2).fill("Yes — and it complicates things.")
+  ],
+  action: ["Admire","Aid","Argue","Bake","Banter","Befriend","Bother","Brew","Build","Buy","Cast","Catch","Celebrate","Collect","Compliment","Confess","Confide","Cook","Cuddle","Cultivate","Cure","Dance","Debate","Dig","Discover","Divine","Donate","Doze","Embrace","Enchant","Enhance","Enrich","Excavate","Explore","Express","Farm","Find","Fire","Fish","Flirt","Follow","Gift","Gossip","Grasp","Greet","Guide","Hammer","Harvest","Heal","Hike","Honor","Host","Invite","Joke","Labor","Listen","Loaf","Loot","Mix","Nurture","Observe","Perform","Pester","Photograph","Play","Plot","Poke","Postpone","Predict","Repair","Rest","Romance","Sail","Sell","Serve","Shake","Share","Shop","Smooch","Solve","Spur","Stew","Study","Summon","Support","Swim","Teach","Tease","Thread","Tinker","Trade","Transform","Trash","Travel","Unravel","Wash","Water","Weave","Whisper","Write"],
+  theme: ["Adventure","Anticipation","Art","Baby","Beach","Bed","Beloved","Birthday","Business","Cave","Celebration","Ceremony","Children","Church","City Hall","Comfort","Community","Confession","Confusion","Contest","Creature","Crops","Darkness","Darling","Date","Dream","Duty","Elder","Engagement","Entertainment","Essence","Exhaustion","Family","Feast","Festival","Field","Flowers","Forest","Fortune","Friendship","Guardian","Happiness","Heart","Hearth","Heirloom","Helper","Hero","Hidden","Hope","Hunger","Intrigue","Kiss","Leader","Leisure","Lesson","Letter","Love","Luck","Market","Meal","Mines","Mountain","Mystery","Nightmare","Parent","Partner","Passion","Pet","Potion","Power","Present","Regret","Ring","Rivalry","River","Sadness","Sea","Secret","Shenanigans","Ship","Sibling","Sleep","Snack","Soup","Spouse","Sweetheart","Tavern","Thrill","Tower","Treasure","Treehouse","Trinket","Trip","Ward","Wedding","Well","Wilderness","Wonder","Youth"],
+  descriptor: ["Abandoned","Afraid","Aged","Ancient","Attractive","Bitter","Blessed","Bubbly","Bustling","Campy","Charming","Cheap","Cheerful","Cold","Colorful","Comforting","Cozy","Cranky","Creaky","Crumbling","Cursed","Cute","Dangerous","Deep","Dilapidated","Dusty","Eerie","Enchanted","Endearing","Excellent","Fair","Familiar","Firm","Flimsy","Floral","Fluffy","Fluttering","Foggy","Fragrant","Fuzzy","Glowing","Handmade","Healing","Huge","Icy","Incomprehensible","Intimate","Intimidating","Inviting","Loved","Lush","Melancholic","Misty","Mossy","Musical","Mysterious","Nostalgic","Otherworldly","Overgrown","Overheating","Peaceful","Pristine","Quiet","Rainy","Rash","Restful","Round","Rugged","Rusty","Safe","Scary","Shimmering","Shiny","Sketchy","Sleek","Snug","Soft","Soothing","Sour","Spacious","Sunny","Supernatural","Surprising","Suspicious","Sweet","Tangled","Tattered","Tense","Thriving","Tiny","Toasty","Towering","Unsettling","Untouched","Vast","Warm","Welcoming","Well-worn","Wobbly"],
+  focus: ["Artisan","Artist","Athlete","Bakery","Beach","Beauty","Book","Cafe","Cave","Champion","Child","Church","Clinic","Community Center","Confusion","Contender","Control","Crops","Dealer","Downfall","Dragon","Dread","Dreamer","Dreams","Elder","Farm","Festival","Field","Fool","Forest","Fountain","Future","Garden","Gift","Goals","Graveyard","Gym","Healer","Heartthrob","Hermit","Hero","Hesitation","Hipster","Hopes","House","Hustler","Infamy","Journey","Justice","Kitchen","Leader","Legacy","Library","Livestock","Lovers","Market","Metamorphosis","Miracle","Monument","Motivation","Mountain","Museum","Nature","Ocean","Opportunity","Outcast","Outskirts","Park","Peace","Perfection","Pet","Playground","Plaza","Port","Post Office","Pride","Rival","River","Road","Sage","Security","Seeds","Self","Shop","Socialite","Song","Stable","Stall","Star","Tavern","Theater","Tool","Town","Town Hall","Townie","Trail","Vehicle","Villain","Wanderer","Wishes"],
+  storyHook: ["A building has appeared out of nowhere","A creature has been sighted outside of town","A dense fog has settled over your living place","A famous author is visiting the local library","A fortune teller has stopped in town and is asking to speak to you","A hidden talent is revealed","A local artist is having an exhibition","A local club is having a meeting","A local shop is having a sale","A lunar eclipse occurs","A merchant selling rare items is visiting for the day","A meteorite lands near your living place","A migration of butterflies is flying over the town","A mysterious plant grows by your front door","A mysterious stranger wants to know your name","A new structure in the town has just been completed","A rare book from the library goes missing","A renowned magician is passing through","A small earthquake happens in the night","A solar eclipse occurs","A specter begins to haunt the town","A spirit reveals itself to you","A star shower falls over the town","A storm in the night causes minor damage","A strange squeaking is coming from underneath your bed","A stranger has approached you thinking you're someone else","A townie asks to stay the night at your place","A townie asks you to babysit for a day","A townie gets a cold","A townie is hiding something from you","A townie is holding a picnic","A townie is holding a flea market","A townie starts acting strange","A townie invites you for a meal","A townie's pet got loose","A townie's pet has turned a strange color","A tree has fallen in the night","A visitor is looking for a missing person","A weird statue appears where you live","A wounded creature is at your doorstep","An elder townie is having a card game competition","An owl has made residence in your attic","It's the Beach Episode!","Lightning strikes the town clock tower","Local theatre is having a special showing","One of your crops has grown to an enormous size","Singing competition at the local bar","Someone asks you for a favor","Someone attempts to pick your pocket","Someone else moves into town","Someone from your past visits","Someone has been wrongfully accused","Someone has found a treasure map","Someone makes their feelings known","Someone presents you with a riddle to solve","Someone reveals a secret","Someone surprises you with a thoughtful gift","Someone takes you out on a date","Something washes ashore on the beach","Something you own is missing","Storytelling Night at the local pub","The circus has arrived in town","The school is hosting a fundraiser","The town is sleeping under the stars in the town square","The vehicle of a traveller has broken down nearby","There's only one bed","There's something in the town's fountain","Townie's cutlery keeps disappearing","Two townies are getting married","You and a townie have the same dream","You are helping someone with their studies","You are invited to be part of a local play","You are visited in the dead of night","You catch wind of a rumor","You discover a secret in the woods","You discover a secret location","You discover a secret room in your home","You dream about a townie in the night","You find a diary that does not have a name","You find a list of names","You find a sacred place","You find a townie's lost item","You get a mysterious letter","You get a penpal","You get a phone call from a family member","You get an unmarked package","You have a prophetic dream","You have an epiphany about someone","You hear a beautiful voice singing from afar","You hear chanting in the night","You learn about a townie's past","You receive a package from a family member","You recover a lost memory","You see a shadowy figure sneaking around at night","You start a new hobby","You unearth an old relic","Young townies are setting up a prank","Young townies have set up a lemonade stand","Young townies want to do your hair"],
+  heartEvent: ["They apologize for something that isn't their fault","They ask about the place you used to live in","They ask about your goals for the future","They ask about your reason for coming to this town","They ask for help with something they can't do themselves","They ask for relationship advice","They ask for you to join their friend group","They ask if you enjoy living in this town","They ask to know your real feelings","They ask what you know about dreams","They ask what you know about love","They ask you about the person you have a crush on","They ask you about your childhood","They ask you about your family","They ask you about your last breakup","They ask you about your old friends","They ask you about your problems","They ask you for help","They ask you for the meaning of life","They ask you for your honest opinion","They ask you how long you intend to stay","They ask you if they can move in","They ask you if they should leave town","They ask you if you are in love","They ask you if you have any fears","They ask you if you want to buy a house together","They ask you if you want to move in","They ask you out on a date","They ask you to be their date for a local dance tonight","They ask you to be their partner at a local contest tonight","They ask you to go with them to the place that scares them most","They ask you to make a promise to them","They attempt to comfort you","They confess how much you mean to them","They cook their favorite meal for you","They give you something that is very dear to them","They give you the exact thing you need right now","They had a bad day and sought you for comfort","They introduce you to their secret hobby","They invite you to a party they're throwing tonight","They invite you to stargaze with them","They invite you to watch the sunrise with them","They let you see them at their most vulnerable","They make a promise to you","They make amends for the past","They offer to help you overcome your greatest fear","They open up to you about a personal struggle","They reveal a secret passion","They reveal their concerns for your well being","They share a fundamental childhood memory","They share their biggest worry at the moment","They share their childhood fears with you","They share their doubts for the future","They share their favorite thing in the world","They share their hopes and dreams for the future","They share with you their happiest memory","They share with you their most embarrassing moment","They share with you their saddest memory","They sincerely apologize for something they did","They surprise you with a gift","They surprise you with a gift that reminded them of you","They surprise you with a hand-made item","They surprise you with a memento from their past","They surprise you with a new pet","They surprise you with a new set of clothes","They surprise you with a piece of art they made themselves","They surprise you with a sentimental gift","They surprise you with a trip to a nearby town","They surprise you with a very useful item","They surprise you with new furniture","They surprise you with something you thought you'd lost","They take you camping","They take you deep into the wilderness","They take you for a swim","They take you out on a walk at dusk","They take you to see someone very important to them","They take you to see the local artists","They take you to the one place you want to see most","They take you to their favorite place in nature","They take you to their favorite shop","They tell you a secret about their history","They tell you about a loved one they lost","They tell you about the closest friend they ever had","They tell you about the person they have a crush on","They tell you about their last breakup","They tell you about their problems","They tell you how grateful they are to know you","They tell you how happy they are to have run into you","They tell you something you didn't know about another Townie","They tell you something you didn't know about life","They tell you something you didn't know about the town","They tell you something you didn't know about the wilderness","They tell you the meaning of life","They tell you they are in love","They tell you what they really feel about their family","They throw a surprise party for you!","They vow to always be your friend","They vow to make a change in their life","They vow to turn their life around","Roll twice"],
+  weather: {
+    spring: ["Sunny","Sunny","Sunny","Cloudy","Cloudy","Cloudy","Windy","Windy","Rainy","Storm","Allergy Season","Flooding"],
+    summer: ["Sunny","Sunny","Sunny","Heat Wave","Heat Wave","Cloudy","Cloudy","Rainy","Storm","Windy","Lightning Storm"],
+    fall: ["Windy","Windy","Windy","Cloudy","Cloudy","Sunny","Rainy","Storm","Foggy","Strong Gales"],
+    winter: ["Flurry","Windy","Cloudy","Clear","Clear","Hail","Blizzard","Freezing Cold"]
+  },
+  location: ["Abandoned House","Abandoned workshop","Alleyway","An ancient shrine","An underground bunker","At the bottom of the well","Bar at happy hour","Bear cave","Behind the waterfall","Berry bush patch","Boardwalk","Bottom of the lake","Burnt out tree","Campgrounds","Cave with glowing mushrooms","Cliff face","Community Center","Community Garden","Coral reef","Crystal cave","Dense Forest","Doctor's Office","Fairy Circle","Farm","Field of wildflowers","Field with crop circles","Fishing pond","Forest Clearing","Fountain","Gentle brook","Giant tree in the middle of the forest","Graveyard","Harbor","Haunted house","Hidden from view","Hiking trail","Hill overlooking the town","Hunting lodge","Inn","Inside the old barn","Library","Local Shop","Log cabin","Market","Metro station","Museum","Old carousel in the woods","Overgrown Farm","Park","Patch of marshland","Peaceful lake","Playground","Plaza","Pond said to have healing properties","Post Office","Quarry","Quiet dock at midnight","Ranger station","Restaurant","River rapids","Roadside stand","Rock cliffs overlooking the ocean","Rock climbing spot","Rolling hills","Sandy beach","School","Secret mine entrance","Secret treehouse","Small island","Snowy summit","So deep in the forest you might as well be lost","Stone circle where people gather at night","The base of the mountain","The bottom of the caves","The fairgrounds","The local temple","The old iron mine","The one house nobody goes in","The road out of Iron Valley","The top of the tallest tree","\"The Witch's Hut\"","Top of the mountain","Town Hall","Townie's House","Tree grove","Tree with moss growing on the wrong side","Under the bridge","Underwater cave","Valley of shimmering moonflowers","Walking Trail","Where the fog is so thick you can't see","Wishing well"],
+  townNamePart1: ["Amber","Birch","Blossom","Calm","Cerulean","Copper","Coral","Crystal","Deep","Dusty","Fair","Forgotten","Gem","Golden","Grand","Green","Harvest","Hazel","Heart","Hidden","Hope","Iron","Ivy","Jolly","Joy/Joyful","Juniper","Lapis","Lazy","Little","Lonely","Misty","Oak","Old","Open","Pine","Quiet","Rainbow","Rainy","Rosy","Silent","Silver","Small","Stone","Sunrise","Sunset","Treasure","Vermillion","Wild","Willow","Windy"],
+  townNamePart2: ["Aerie","Bastion","Bay","Brook","Canyon","Castle","Channel","Chateau","Circle","Cliff","Coast","Copse","Creak","Dale","Falls","Flag","Forest","Haven","Hill","Home","Isle","Landing","Manor","Marsh","Meadow","Mill","Mountain","Oasis","Outpost","Path","Peak","Place","Plains","Plateau","Plaza","Port","Reef","River","Shire","Square","Summit","Town","Trail","Vale","Valley","Villa","Village","Wall","Ward","Wild"],
+  ancestryFantastical: ["Alien / Extraterrestrial","Angel","Angelkin (Half Human Half Angel)","Animal Folk (Half Human, Half Roll on the Animal Table)","Automaton","Avian Folk","Beast Folk","Cosmic Elemental","Dark Dwarf (Underground)","Dark Elves (Underground Elves)","Darkness Elemental","Demigod","Demon / Devil","Demonkin (Half Human, Half Demon)","Doppelganger / Changeling (Roll again for current form)","Dragon Folk","Dullahan","Dwarf","Dwarf","Dwarf","Dwarf","Dwarf","Earth Elemental","Elementalkin, Cosmic","Elementalkin, Darkness","Elementalkin, Earth","Elementalkin, Fire","Elementalkin, Light","Elementalkin, Metal","Elementalkin, Water","Elementalkin, Wind","Elementalkin, Wood","Fairies / Fey","Fire Elemental","Gargoyle","Ghost","Giants","Gnome","Goblins","Goblins","Goblins","Goblins","Goblins","Goblins","Goblins","Gorgon","Half Human Half Roll Again","Halflings","High Elves / Blooded","Humans","Humans","Humans","Humans","Humans","Humans","Humans","Humans","Humans","Kappa","Light Elemental","Marionette","Merfolk","Metal Elemental","Mimic","Minotaur","Mothkin","Mushroomkin","Naga / Lamia","Ogre","Orc","Orc","Orc","Orc","Orc","Orc","Orc","Rat Folk","Skeleton","Slime","Spiderkin / Scorpionkin","Succubus / Concubus","Tanuki","Treant","Trolls","Vampire","Water Elemental","Werewolf","Wind Elemental","Wood Elemental","Wood Elves / Wild","Wood Elves / Wild","Wood Elves / Wild","Wood Elves / Wild","Wood Elves / Wild","Wood Elves / Wild","Wood Elves / Wild","Zombie","Hybrid (Roll Twice and Pray)"],
+  ancestryAnimal: ["Alligator","Alpaca / Llama","Anteater","Ape / Gorilla","Armadillo","Axolotl","Bat","Bear","Beaver","Beluga","Bird","Buffalo / Water Buffalo","Bull / Cow","Bunny","Camel","Capybara","Cat (Fluffy)","Cat (Hairless)","Cat (Munchkin)","Cat (Short Fur)","Chameleon","Chimera","Chinchilla","Chipmunk","Crocodile","Deer / Reindeer","Dinosaur","Dodo","Dog (Fluffy)","Dog (Large)","Dog (Small)","Dog (Stout)","Dragon / Wyvern","Duck","Eagle","Elephant","Flamingo","Fox","Frog / Toad","Goat","Gorilla","Guinea Pig","Hamster","Hedgehog","Hippo","Hippogriff","Horse / Donkey","Human","Hyena","Iguana","Jackal","Jackalope","Kangaroo","Koala","Komodo","Lion","Lizard / Gecko","Manatee","Mole","Monkey","Moose","Mouse","Octopus","Okapi","Ostrich","Otter","Owl","Panda","Peacock","Pelican","Penguin","Phoenix","Pig / Hog","Platypus","Possum","Puffin","Quokka","Rabbit / Hare","Raccoon","Rat","Raven / Crow","Rhinoceros","Rooster / Chicken","Seal / Walrus","Sheep / Ram","Skunk","Sloth","Snake","Squirrel","Swan","Tapir","Tiger","Tortoise / Turtle","Toucan","Tsuchinoko","Unicorn","Wolf","Wombat","Zebra"],
+  namesCute: ["Acacia","Anise","Apple","Aspen","Aurelia / Aurelis","Autumn","Avocado","Basil","Birch","Bliss","Blueberry","Bluejay","Botan","Bubble","Canary","Carnation","Carrot","Chamomile","Chanterelle","Cherry","Clementine","Clover","Coco","Coffeebean","Cosmos","Daffodil","Daisy","Dandelion","Doppio","Elm","Enoki","Feather","Fern","Fig","Flor","Ginger","Gourd","Harmony","Heather","Hibiscus","Holly","Honey","Huckleberry","Iris","Ivy","Jasmine","Java","Junebug","Juniper","Kale","Kuutti","Laurel","Lemon","Lief","Lily","Lotus","Lúz","Magnolia","Maple","Marguerite","Marigold","Matcha","Mint / Minty","Morel","Mushroom","Nala","Oak","Onion","Orange","Oyster","Parsley","Peach","Peony","Pepper","Pine","Plum","Pomo","Poppy","Potato","Pumpkin","Raspberry","Robin","Rose","Rowan","Sage","Spring","Spruce","Summer","Sunny","Sycamore","Thistle","Thyme","Tomato","Truffle","Tulip","Turnip","Willow","Winter","Wisteria"],
+  namesCool: ["Aestral","Aldebaran","Amber","Amethyst","Andes","Antares","Argent","Auburn","Aura / Aurora","Azul","Bismuth","Blanche","Blaze","Blondie","Bolt","Brooke","Canyon","Caster","Cave","Celeste","Ciel","Citrine","Cliff","Cloud","Coral","Craig","Cressida","Crystal","Cyan","Cygnus","Diamond","Ebony","Emerald","Etoile","Everest","Frost","Gail","Garnet","Gold","Gravel","Hollow","Hunter","Iceberg","Indigo","Ivory","Jasper","Lapis / Lazuli","Lava","Leon","Lilac","Lionseye","Luna / Lune","Magnus","Marina","Misty","Mojave","Moonstone","Mountain","Neon","Nimbus","Noir","Obsidian","Opal","Orion","Paradox","Pearl","Pebble","Peridot","Phantom","Pollux","Pyrope","Quarry","Quartz","Rain / Raine","Redd","Reef","River","Roja","Ruby","Rusty","Saga","Sapphire","Scarlet","Serenity","Sierra","Silver","Skye","Snow","Sparky","Squall","Star","Terra","Topaz","Tornado","Verde","Violet","Wolke","Yosemite","Zircon"],
+  namesFunny: ["Ace","Affogato","Amity","Arcade","Arrow","Bean","Bernie / Bennie","Bingus","Bite","Blorbo","Bolita","Boo!","Box","Broom","Bug","Bunny","Buster","Buttercup","Candelabra","Candy","Carafe","Chase","Clown","Cory","Cream","Cup","Daydream","Doily","Donut","Dove","Dulce","Duster","Egg","Felix","Fork","Frappe","Glove","Granola","Greeble","Honk","Ianto","Jewel","Ketchup","Kettle","Kiki / Keke","Kitty","Knife","Lamp","Latte","Lime","Loaf","Melody","Milk","Mixer","Moss","Muffin","Mustard","Noodle","Nuggie","Nurny","Pancake","Peanut","Pippy","Potoo","Puppy","Ramen","Reese","Retro","Rogue","Scrunchie","Shark","Shrimp","Skelly","Snail","Sniff","Sock","Soup","Spatula","Spicy","Splimbus","Spoon","Sprinkle","Sugar","Tadpole","Tamago","Teacup","Toby","Treasure","Tummy","Udon","Valentine","Waffle","Wasabi","Whisper","Wilde","Wish-Bone","Worm","Wrench","Yogurt"],
+  job: ["Administrator","Adventurer","Alchemist","Animal Tamer / Keeper","Apothecary","Archaeologist","Artist","Astrologist","Baker","Bar Regular","Barber / Hairdresser","Bard / Musician","Bartender","Bathhouse Keeper","Beekeeper","Blacksmith","Body Builder","Book Binder","Builder","Busybody (Town Gossip)","Candymaker","Carpenter","Cobbler / Shoemaker","Coffee/Tea House Keeper","Constable/Town's Guard","Cook","Couch Potato","Doctor","Farmer","Fashionista","Ferry Person","Fisher","Florist","Forager","Forester","Fortune Teller","Freelancer","Friendly Villager","Ghost","Graveyard Keeper","Grocer","Groundskeeper","Hat Maker","Herbalist","Hermit","Home / Interior Designer","In Between Jobs","Innkeep","Inventor","Jester / Comedian","Jeweler","Librarian","Local Menace","Mail Person / Courier","Matchmaker","Mayor","Mechanic","Miner","On Sabbatical","Personal Assistant","Petty Thief","Photographer / Portrait Painter","Picker Upper","Poet / Writer","Potion Maker","Prankster","Priest","Rancher","Record Keeper","Restaurant Owner","Restaurant Server","Retired","Rival Farm","Sailor","Scholar","Scientist","Secretary","Shady Merchant","Shopkeep","Shrine Keeper","Snitch","Stay-at-home-parent","Steward (Butler/Maid)","Student","Tailor","Teacher","Thrift Shopkeeper","Tourist Guide","Toy Maker","Traveler / Tourist","Traveling Merchant","Unemployed","Upstanding Citizen","Veterinarian","Villager","Weaver","Weeder","Wildlife Rescue","Wizard/Witch","Woodcutter"],
+  age: [
+    ...Array(1).fill("Baby"),
+    ...Array(9).fill("Child"),
+    ...Array(20).fill("Teen"),
+    ...Array(40).fill("Young Adult"),
+    ...Array(20).fill("Adult"),
+    ...Array(9).fill("Elder"),
+    ...Array(1).fill("Ancient")
+  ],
+  pronouns: [
+    ...Array(25).fill("they/them"),
+    ...Array(25).fill("she/her"),
+    ...Array(25).fill("he/him"),
+    ...Array(25).fill("she/they"),
+    "he/they","it/its","any"
+  ],
+  presentation: [
+    ...Array(25).fill("Feminine"),
+    ...Array(25).fill("Masculine"),
+    ...Array(25).fill("Androgynous"),
+    ...Array(25).fill("Other")
+  ],
+  traits: ["Adorable","Adventurous","Agile","Aloof","Ambitious","Anxious","Arrogant","Artistic","Athletic","Bitter","Bold","Book Smart","Brooding","Buff","Careless","Caring","Cautious","Charming","Chatty","Competitive","Confident","Crafty","Creative","Curious","Daring","Deceptive","Determined","Devoted","Disabled","Disarming","Eccentric","Elegant","Excited","Faithful","Fashionable","Foodie","Frightened","Frugal","Generous","Gentle","Glamorous","Grumpy","Guilty","Hard-working","Healthy","Hilarious","Homebody","Honest","Hot-Headed","Impulsive","Independent","Irritated","Jolly","Kind","Lavish","Lazy","Loud","Loyal","Mischievous","Mysterious","Naive","Needy","Nerdy","Nurturing","Observant","Optimistic","Organized","Outdoorsy","Passionate","Peppy","Pessimistic","Powerful","Prepared","Protective","Quiet","Rebellious","Relaxed","Romantic","Scary","Secretive","Selfish","Selfless","Serious","Sharp","Shy","Skeptic","Sleepy","Snarky","Soft Spoken","Sporty","Street Smart","Studious","Superstitious","Tenacious","Timid","Troubled","Unruly","Well-spoken","Wild","Wise"],
+  charm: ["Always carrying a book","Always carrying drink/food","Always has pet with them","Always in Uniform","Always Smirking","Animal Ears/Horns Accessory","Apron","Baby Face","Bandages","Bandana","Barefoot","Beauty Mark","Belts","Big Doll Eyes","Big Hat","Big Shoes","Big Weapon/Tool","Billowing Cloak","Birthmark","Bodysuit","Boots","Bracelet","Brooch","Burn Scar","Cane","Carries a Doll/Plush","Choker","Cleavage (Gender Neutral)","Corset/Binder","Crown","Cute Lil Fang","Dance Shoes","Deadpan Expression","Disheveled","Dramatic Eyebrows","Dressed for Success","Earrings","Eye(s) Covered","Eyebags","Eyepatch","Face is obscured","Face Paint","Family Insignia","Fanny Pack","Flowers","Freckles","Frills/Ruffles","Gap in front teeth","Glasses","Glitter","Gloves","Goggles","Hair Antenna","Headband","Heterochromia","High Collar","Large Bag/Backpack","Long Coat","Long Eyelashes","Makeup","Mask","Medal","Midriff","Mischievous Grin","Missing Limb","Mobility Device","Monocle","Muscular","Narrow Frame","Oversized Clothes","Parasol/Umbrella","Pendant","Permanently Looks Grumpy","Piercing(s)","Pocketwatch","Provocative Clothing","Ribbon","Ring","Rosy Cheeks","Scar(s)","Scarf/Muffler","Short","Showing Some Skin","Sunglasses","Suspenders","Tall","Tattered Cloak","Tattoo(s)","Tie/Bow Tie","Tight-fitting Clothes","Tiny Bag","Tiny Hat","TOO MANY ACCESSORIES","Toothpick/Lollipop","Traditional Clothing","Utility Belt","Veil","Wide Frame","Wrinkles","Zippers"],
+  hobby: ["Animal training","Ant keeping","Archaeology/Fossil hunting","Astronomy","Baking/Cooking","Baseball","Beekeeping","Beer brewing","Biology","Bird Watching","Blacksmithing","Board games","Breakdancing","Bug collecting","Cheesemaking","Chess","Clothes Making","Coin collecting","Comic books","Community Radio","Cornhole","Cosplaying","Cross Stitch","Crossword puzzles","Cryptography","Dance","Drama (Acting)","Drawing","Engineering","Fashion","Filmmaking","Fishing","Football","Freestyle rapping","Gardening","Genealogy","Geology","Ghost hunting","Glass Blowing","Gunsmithing","Hiking","Horticulture (Flowers)","Houseplants","Interior decorating","Jigsaw puzzles","Juggling","Karaoke","Knitting","Lacrosse","Leather crafting","Martial arts","Meditation","Metal detecting/beach combing","Model aircraft","Model trains","Music (Banjo)","Music (Drums)","Music (Guitar)","Oil painting","Origami","People Watching","Photography","Ping-pong","Poetry","Pogs","Pottery","Pranks/Practical jokes","Puppetry","Reading (Fantasy)","Reading (History)","Reading (Mysteries)","Reading (other)","Rugby","Running","Scrapbooking","Sculpting","Singing","Skiing","Sledding","Soap making","Soccer","Spellcrafting/Witchcraft","Stamp collecting","Stand Up comedy","Sunbathing","Surfing","Swimming/Diving","Tarot reading","Thrifting","Upcycling","Vinyl records","Volleyball","Wine tasting","Wood working","Writing (Fiction)","Writing (Journaling)","Writing (Local history)","Yo-yo","Yoga"],
+  relationshipBase: ["Acquaintance","Apprentice","Assistant","Business Partner","Childhood Friend","Classmate","Club Member","Coworker","Employee","Employer","Fan","Friend","Friend of a Friend","Frienemy","Idol","Menace","Mentor","Mortal Enemies","Neighbor","Patron","Regular","Rival","Roommate","Obnoxious Friends","Guildmates"],
+  relationshipFamilial: ["Parent","Step Parent","Like a Parent to Me","Parental Figure","Step Child","Child","Ward","Godchild","Like a Sibling","Sibling","Step Sibling","Half Sibling","Sibling In Law","Twin","In Laws","Grandparent","Long Lost Relative","Guardian","Godparent","Like Family","Related","Found Family","Family Friend","Caretaker","Estranged"],
+  relationshipRomantic: ["Childhood Sweetheart","Crush","Datemate","Ex","First Love","Friends to Lovers","Head Over Heels","Heartbroken","Interested","\"Just Friends\"","Love Rivals","Love Triangle","Mutual Attraction","On Again Off Again","Partner","Platonic Romance","Polyamorous Romance","Queerplatonic Partners","Rivals to Lovers","School Sweethearts","Secret Admirer","Spouse","Summer Fling","Terrible Crush","Unrequited Love"],
+  cropsSpring: ["Azalea","Buttercup","Daffodil","Daisy","Pansy","Peony","Tulips","Hemp","Rice","Bamboo","Black Tea","Cinnamon","Green Tea","Mint","Mustard","Rosemary","Sugar Cane","Tamarind","Vanilla","Button Mushroom","Morel Mushroom","Plump Helmets","Portobello Mushroom","Shiitake Mushroom","Ancient Fruit","Apricot","Cherry","Coconut","Guava","Kiwi","Blackberry","Blueberry","Raspberry","Strawberry","Youthberry","Beet","Broccoli","Brussel Sprouts","Cabbage","Cucumber","Daikon","Kale","Lettuce","Mandrake","Onion","Parsnip","Potato","Radish","Taro Root","Turnip"],
+  cropsSummer: ["Forget Me Not","Hibiscus","Marigold","Peony","Petunia","Poppy","Sunflower","Water Lily","Flax","Oats","Rice","Wheat","Aloe Vera","Basil","Black Tea","Chamomile","Eucalyptus","Tamarind","Morel Mushroom","Shiitake Mushroom","Bananas","Coconut","Durian","Kiwi","Lemon","Lime","Lychee","Mangos","Melon","Orange","Papaya","Peach","Pineapple","Pitaya","Plum","Star Fruit","Watermelon","Grapes","Bell Pepper","Cabbage","Chili Pepper","Cocoa Beans","Coffee Beans","Corn","Cucumber","Green Beans","Kale","Okra","Onion","Tomato"],
+  cropsFall: ["Daisy","Forget Me Not","Marigold","Mum","Rose","Snapdragon","Cotton","Hemp","Oats","Rice","Wheat","Basil","Black Tea","Cinnamon","Ginger","Green Tea","Mint","Osmanthus","Rosemary","Tamarind","Chanterelle Mushroom","Plump Helmets","Shiitake Mushroom","Apple","Avocado","Coconut","Figs","Hazelnut","Melon","Papaya","Pear","Persimmons","Pitaya","Plum","Pomegranate","Bell Pepper","Carrot","Cauliflower","Cocoa Beans","Coffee Beans","Corn","Green Beans","Leek","Onion","Pumpkin","Soybeans","Spinach","Squash","Tomato","Yam"],
+  cropsWinter: ["Begonia","Campanula","Cineraria","Poinsettia","Primrose","Snowdrops","Cotton","Hemp","Rice","Black Pepper","Ginger","Mandrake","Mint","Rosemary","Sugar Cane","Vanilla","Button Mushroom","Chanterelle Mushroom","Enoki Mushroom","Portobello Mushroom","Shiitake Mushroom","Avocado","Durian","Figs","Guava","Jackfruit","Kiwi","Persimmon","Rambutan","Blackberry","Blueberry","Raspberry","Strawberry","Beet","Broccoli","Brussel Sprouts","Cabbage","Carrot","Cauliflower","Daikon","Green Beans","Kale","Leek","Lettuce","Parsnip","Potato","Radish","Taro Root","Turnip","Yam"],
+  livestockNormal: ["Pig","Bees","Horses","Chicken","Duck","Cow","Goat","Alpaca","Sheep"],
+  livestockFantastical: ["Gnoseshroom","Prickly Dear","Banamallard","Blorb","Regurgeon","Nubelli","Pitcher Crab","Beaver Weaver","Chillachonk"],
+  favoriteResource: ["Flowers","Mushrooms","Herbs","Grains","Fruit","Vegetables","Berries","Fish","Wood","Ore","Eggs","Gems","Milk","Textiles/Wool","Honey","Bugs","Fossils","Spring Water","Rubbish","Ideas/Inspiration"],
+  favoriteItem: ["Clothes","Shoes","Medicine","Jewelry","Books","Tools","Art","Furniture","Toys","Drinks","Food","Fragrances","Floral Arrangements","Home Goods"],
+  favoriteGame: ["A Hat In Time","A Short Hike","Ace Attorney","American Truck Simulator","Arcade Paradise","Baba Is You","Banjo-Kazooie","Beat Saber","Brain Age","Bugsnax","Calico","Celeste","Cities Skylines","Civilization","Coffee Talk","Cook Serve Delicious","Costume Quest","Crazy Taxi","Dance Dance Revolution","Donkey Kong","Donut County","Dream Daddy","Fall Guys","Fire Pro Wrestling","Firewatch","Frog Fractions","Gang Beasts","GeoGuessr","Goat Simulator","Gone Home","Gran Turismo","Hearthstone","Hot Shots Golf","House Flipper","Ico","Inscryption","It Takes Two","Jackbox Games","Jet Set Radio Future","Journey","Katamari Damacy","Kirby's Dreamland","Kuru Kuru Kururin","Lawn Mowing Simulator","LittleBig Planet","Lumines","Marble Madness","Mario Kart","Mario Party","Minecraft","MS Flight Simulator","Ni no Kuni","Nintendogs","No Man's Sky","OlliOlli","Ori and the Blind Forest","Pac-Man","Pajama Sam","Paperboy","Picross","Pikmin","Pilotwings","Planet Zoo","Pokemon","Portal","Power Wash Simulator","Psychonauts","Puyo Puyo","Return to The Obra Dinn","Rock Band","Roller Coaster Tycoon","Slime Rancher","Snake Pass","Solitaire","Sonic The Hedgehog","Space Invaders","Spiritfarer","Sports Story","Spyro The Dragon","Starwhal","Stray","Super Mario 64","Super Monkey Ball","Superliminal","Tetris","The Legend of Zelda","The Oregon Trail","The Outer Wilds","The Sims","The Witness","Tony Hawk's Pro Skater","Undertale","Unpacking","Untitled Goose Game","WarioWare","Where In The World is Carmen Sandiego","Wii Sports","Wordle","Yoku's Island Express","Yoshi's Story"],
+  color: ["Amethyst","Apple Red","Apricot","Artic Blue","Baby Blue","Banana Yellow","Black","Blue","Bone White","Bronze","Brown","Bubblegum Pink","Bumblebee Yellow","Burgundy","Burnt Orange","Canary Yellow","Candy","Caramel","Carrot","Charcoal","Cherry","Cherry Blossom","Chocolate","Cider","Cinnamon","Coal","Cobalt","Coffee","Coral","Cream","Crimson","Dark Grey","Dark Red","Dove","Ebony","Emerald","Flamingo Pink","Forest Green","Fuchsia","Gold","Grape","Green","Grey","Hickory","Honey","Hot Pink","Ink Black","Ivory","Jade","Lapis","Lavender","Lemon","Lilac","Lime","Magenta","Midnight","Mint","Misty Grey","Mocha","Moss Green","Mulberry","Mustard","Navy Blue","Obsidian","Olive Green","Onyx","Orange","Orchid","Pecan","Pewter","Pink","Plum","Pumpkin","Purple","Red","Rose","Ruby","Sandy Yellow","Sapphire","Scarlet","Sea Green","Silver","Sky Blue","Slate","Smokey Grey","Soot","Spring Green","Steel Blue","Sunshine Yellow","Tangerine","Tawny Brown","Teal","Turquoise","Umber","Violet","Walnut","Watermelon Pink","White","Wine","Yellow"],
+  fleaMarket: ["Basket","Bed","Bedding","Bench","Birdfeeders","Blanket","Board Games","Bolts of fabric","Bookcase","Books","Bowls","Boxes","Bicycle","Cabinet","Candles","Clock","Clothing","Coffee table","Collectables","Combs / Brushes","Comfy chair","Cookie Jar","Costumes","Craft Supplies","Curtains","Cushions","Decorative Spoons","Decorative Tins","Desk","Dining chair","Dining table","Dresser","Dressing Table","End table","Exercise Equipment","Figurines","Fishing Equipment","Flags","Floor mats","Flowerpot","Fountains","Garden statues","Glassware","Gloves / Mittens","Hair Accessories","Hat","Jackets","Jars","Jewelry","Kitchen Utensils","Knickknacks","Lamp","Lantern","Linen","Love seat","Magazines","Masks","Mirror","Mugs / Cups","Music box","Musical Instrument","Night Table","Ornaments","Ottoman","Paintings","Perfume","Pet beds","Pet toys","Pictures","Pillows","Picnic Table","Pins","Plates","Plushie","Posters","Pots & Pans","Pottery","Pouches / Bags","Quilt","Raincoats","Robes","Rocking chair","Rugs","Shelf","Shoes","Silverware","Soaps","Socks","Sofa","Stationary","Stools","Sunglasses","Tablecloths","Teapots","Tools","Toys","Vase","Wardrobe","Wigs","Yarn / Thread"],
+  rubbish: ["A Timeworn Flag","Abandoned Necklace","Acorns","Bark","Barnacles","Broken Glasses","Broken Lamp","Broken Tool","Chestnuts","Clam","Clam with a Pearl Inside","Clay","Dandelions","Driftwood","Feathers","Flask","Forgotten Hat","Four-Leaf Clover","Glass Bottle","Letter in a Bottle","Lost Key","Lost Sock","Lump of Earth","Moss","Old Boot","Old Basket","Old Rope","Old, Damaged Doll","Pine Cones","Pretty Leaves","Pretty Pebbles","Pretty Sticks","Quartz Crystals","Reeds","Sand","Seaglass","Seashells","Seaweed","Shark Tooth","Small Fragment of Ore","Spiderwebs","Spoon","The Biggest Rock You Can Carry","Tiny Bones","Tiny Flowers","Trusty 'Ol Bucket","Vines","Waterlogged Book","Weeds","Whistle Leaf"],
+  requests: ["Assist in childbirth","Attend a contest in my place","Attend this meeting for me","Babysit","Bake a dessert for someone","Be a teacher for a day","Be mayor for a day","Be my adoptive parent","Be my guard on this trip","Be my model","Be the doctor for a day","Be the town mascot for a day","Become the town legend","Break up with them for me","Broom the town square","Build a boat","Build a bridge","Build a community building","Build a feeder for wild creatures","Build a fence","Build a shed","Build a sign","Build a treehouse","Build a well","Can you make my wish come true?","Can you teach me another language?","Catch a Rare Fish","Catch a rare insect","Check in with the hermit","Cheer up someone","Chop down a tree","Chop some wood","Clean up the campsite","Collect Berries","Collect Mushrooms","Collect Nuts","Come to my b-day party","Compose a town tune/song","Cook a romantic picnic for me and my lover","Could someone climb to the top of the mountain?","Could you tell me a bedtime story?","Create a town signature dish","Declutter the beach","Deliver a love letter","Deliver a package to another town","Deliver the newspaper","Deliver town mail","Design a new town mascot","Discover a new fish","Discover a new insect","Discover a new mineral","Discover a new plant","Do my homework","Donate crops","Donate something to the museum","Draw/Sew the town flag","Explore the beach","Explore the caves","Explore the island","Explore the mountain","Find a lost pet","Find a medicinal herb","Find books for the library","Find me a creature","Find my lost axe!","Find my lost item","Find my someone in another town","Find out if that house is haunted","Find out what's behind the waterfall","Find the mayor's shorts","Find where the meteor landed","Find who wrote this love letter","Gather Seashells","Gather stones","Get a photo of a rare creature","Go camping with me!","Go stargazing with me","Guard my house","Heard some unruly creatures","Help clean the junkyard","Help me decide on a name","Help me decorate my house","Help me dress for my date","Help me find a b-day present","Help me find a job","Help me find my child","Help me find my crush","Help me find my lost wedding ring","Help me find my parents","Help me get a gift for someone else","Help me get over a breakup :(","Help me I'm sad :(","Help me make a big pot of soup","Help me make a friend","Help me move in/out","Help me plan a party","Help me plan an anniversary","Help me repair my vehicle","Help me research what love is","Help me win","Help me woo my date","Help me write a book","Help me write a letter","Help me write a poem","Help repair my boat","Help tend the graveyard","Help the town guard","Help with all the town paperwork","Host a speed dating event","Host a sporting event","House sit for me while I'm away","I have a date, could you cover for me?","I need a nickname","I need someone with good taste","I need someone with special skills","I would like you to spread a rumor","Interview someone for the paper","Investigate the rumor about a witch living in the forest","Join in a play/performance","Join me in a feast for the ages!!","Join my forest expedition","Join my idol group","Join my seafaring expedition","Lead a guided tour","Let's build a house!","Look after the Inn while I'm gone!","Make a blanket","Make a new set of clothes","Make a pair of shoes","Make a portrait","Make a scarecrow","Make a scrapbook of the town","Make a treasure map","Make a windchime","Make food for someone","Make me a stuffed animal","Make me and my partner matching shirts","Make this phone call for me","Mine some iron","Need a new piece of furniture","Organize a memorial","Paint a house","Paint a mural","Plan a baby shower","Plan a new festival","Plan my wedding","Plant Flowers / Trees","Please be my test subject","Prepare a dish for a potluck","Pretend to be my date","Propose to someone for me","Pull a playful prank on someone","Put together a puppet show","Put up decorations","Rake Leaves / Shovel Snow / Mow Grass","Read someone a book","Recover my family relic","Repair a broken window","Repair a door","Repair a roof","Repair my broken item","Repair the lighthouse","Research a mysterious creature","Research a mysterious plant","Research the town legend","Restore an abandoned house","Reunite two lost friends","Run for office","Solve the mystery of the beach apparition","Solve the mystery of the ghost","Solve the mystery of those weird statues","Sort the books in the library","Spend a night with me at the graveyard!!","Stop this band of teenagers","Teach kids how to chop wood","Teach kids how to forage","Teach kids how to garden","Teach me how to be lazy","Teach me to dance","Tend a hurt creature in the forest","Tend for someone who's sick","Tend my garden","Tend the beehives","Test my new invention","THIS PERSON IS RUINING MY LIFE","Translate an ancient book","Try out my cooking","Try this new medicine","Use this map to find treasure","Walk my pets","Watch the sunrise with me","We need a drummer","Weed the community garden","Will you please be my date?","Win a fight for me","Win an argument for me","Write a book for me","Write a jingle for local shop"],
+  items: ["Homemade Cake","Fancy Jam/Jelly","Small jar of dark-colored honey","Freshly-baked cookies","Bag of hard candies","Fancy chef salts","Bottle of wine (cheap)","Bottle of wine (expensive)","Tin of loose leaf tea","Jar of pickles","Fruit basket","Box of chocolate","Tin of mints","Bottle of olive oil","Hot sauce","Freshly caught fish","Basket of fresh produce","Homebrewed Beer","Basket of truffles","Bag of Whole Bean Coffee","Homemade Butter","Matcha with whisk and cup","Strange-flavored soda","Farm fresh eggs in many colors","Freshly baked bread","Day-old bread","Bag of roasted nuts","Pink box of donuts","Assortment of fresh herbs","Hot apple cider","Assortment of dried bugs","Wheel of cheese","Citrus Fruit","Fruitcake","Dried mushrooms","Chocolate fudge","Margarita Mix","Rose water","Vanilla extract","Chocolate coins","Vegetable spread","Smoked paprika","Jar of pesto","Bag of dried pasta","Smoked fish","Marzipan candy","Honeycomb","Pancake mix","Bag of short-grain rice","Hand-knitted scarf","Woolen socks","Jeweled Earrings","Crystal necklace","Comfortable slippers","Sturdy work boots","Amulet","Friendship bracelet","Simple gold ring","Pajama pants","Silly hat","Practical Hat","Warm hat","Decorative bobby pins / hair clips","Bath robe / dressing gown","Mittens","Shawl made in neighboring town","Round colored sunglasses","Funny-shaped sunglasses","Billowing cloak","Quilted jacket with sparkling lining","Frilly apron","Hair bow","Glass eye","Bejeweled eye patch","Iridescent body piercing(s)","Second-hand jacket","Oversized belt buckle","Galoshes","Simple white mask","Cloth medical mask","Masquerade mask","Red cape","Cloak that is invisible (does not make wearer invisible)","Wizard's robes","Hand-knit sweater","School uniform","Clogs","Silly wig","Fancy wig","Jewelry made of real teeth","Dance outfit","Bocci ball set","Traditional costume","Beaded glasses chain","Wallet chain","Cat ears","Mittens that look like paws","Tiara / crown","Leather satchel","Handmade Plush Animal","Quilt made from old shirts","Music box that plays a haunting melody","Letter opener that looks like a fancy dagger","Instant Camera with film","Set of paints with quality brushes","Crystal statuette of a whale","Nautilus shell","Faberge egg","Salt and pepper shakers that look like pigs","Soup tureen that looks like a chicken","Candle (smells good)","Candle (smells...not good)","Handmade soap","Board game","Gardening tools","Cookbook","Woven basket","Second-hand teapot","Puzzle box","Bath salts","Love letter","Houseplant","Knitting / Crochet supplies","Quality Chef knife","Angel figure","Bag of seeds (flower)","Bag of seeds (produce)","Portrait of you (high quality)","Portrait of you (low quality)","Vibrant feathers","A kiss","A song","New tool","Pouch of coins from around the world","Lantern","Shaped cookie cutters","Scrapbook of your recent memories","Terracotta pot","Second-hand typewriter","Worry stone","Letter from deceased relative","Contact info (phone number, etc)","Makeup kit","Book of poems","Perfume","Small pouch that makes a fart sound when sat upon","Pot of invisible ink","Plastic blow-up hammer","Foam sword","Small stone with hole in the middle","Rose that never wilts","Candle that always stays lit","Book of puns","Spoon that makes everything it stirs sweeter","Tome with a purple leather cover and silver detailing","Globe of the world that shows the weather","Karaoke Microphone","Waffle maker that makes heart-shaped waffles","LGBTQ+ Pride Pins (your choice)","Heart of a Shooting Star","Tarot Deck","Clown Doll that... might be haunted","Cat statuette that occasionally meows","Pen with multiple colors","Chess set","Full-size gold statue of the mayor","Sticky hand","Broken instrument","Slime","Good luck charm","Jar of loose buttons","Balloon animal kit","Terracotta foot scrubbers","Blanket with sleeves","Tomato pin cushion","Pet fish","Unicycle","Jar of fairy dust (real)","Jar of fairy dust (fake)","Green popcorn","Hardcover volume of popular free indie ttrpg","Cup that maintains temperature of liquid inside","Handheld digital pet game","Old portrait of unknown person that blinks occasionally","Skeleton key that can open any door","Angel feather","Rock with googly eyes","Pine cone","Jar that can not be opened","Trashy and fun romance novel","Vial of water from magic stream","Single crystal shoe","Jeweled skull","A bag of dice","A binder full of trading cards","A boxful of chicken nuggets","A clown nose","A copy of Starforged","A creepy doll","A four leaf clover","A large energy drink","A loaf of freshly baked bread","A lock of hair","A mask","A pacifier","A pair of clown shoes","A pair of comfy slippers","A piggy bank (half full)","A potoo puppet","A pressed flower in an envelope","A Pride Flag","A pride flag pin","A religious book","A small sack full of seeds","A thermos of soup","A tiara / crown","A walking cane/stick","A wand","A warm pair of mittens","A wonderful towel","An endearing garden gnome","An old Bugnet","An old Fishing Rod","An old shirt that's full of memories","An old, time-worn book","Ball of Yarn","Beetle in a jar","Binoculars","Book of family recipes","Book of songs","Broken Locket","Camera","Contacts pocketbook full of names","Crystal ball","Deck of Tarot Cards","Expensive Jewelry","Extra Boot","Extra pair of glasses","Extra pair of undies","Extra thick jacket/coat","Family photo album","Fidget Toy","Fingerless leather gloves with rhinestones","First Aid Kit","Friendship bracelet","Hand Mirror","Handful of buttons","Homemade scarf","Letter not addressed to you","Lighter","Mountain Bicycle","Music Box","Musical Instrument","Old keys","Old Newspaper of the day when it happened","Old sketchbook full of drawings","Origami Crane","Pair of spare socks/leggings","Pins to put on your shirt or hat","Portable Radio","Public Transport Pass (Useless)","Purse filled with various coins","Really fancy shoelaces","Rubber Chicken","Rubber Duck","Rusty Old Tool","Sewing Kit","Someone else's handwritten diary","Sports Trophy and Medals","Textbook on another language","The Coffee Cup you got from Work","The tooth of a mysterious creature","Their favorite hat","Thread and Needle","Time-worn treasure map","Tomato-shaped Kitchen Timer","Typewriter","Umbrella","Wedding Ring","Worn Out picture of a loved one","Writer's Pen","Your childhood plush","Your dad's folding knife","Your favorite board game","Your favorite hat","Your novel manuscript","Your old notebook of poetry","Your pair of roller skates","Your trusty family pet","Your trusty raincoat","Your Very Own Rat"],
+  breakfast: ["Waffles","Pancakes","Fresh Fruit","Rice and Fish","Congee","French Toast","Crepe (Savory)","Crepe (Sweet)","Oatmeal / Porridge","Croissant","Flaky Pastry","Boiled Egg","Chilaquiles","Mohinga","Tapsilog","Idli","Bagel with Lox","Beans and Toast","Cachapas","Pan Dulce","Tamagoyaki","Kaya Toast","Egg-in-a-Frame","Sausage","Hash Browns","Bread and Jam","Cornetto","Chicken and Waffles","Cereal","Roasted Vegetables","Yogurt and Granola","Breakfast Sandwich","Breakfast Burrito","Omelette","Country-Fried Steak","Huevos Rancheros","Eggs Benedict","Acai Bowl","Scrambled Eggs","Sour Cream Coffee Cake","Banana Bread","Cinnamon Roll","Berry Scone","Quiche","Croque Madame","Corned Beef Hash","Sausage Breakfast Casserole","Egg Bhurji","Leftovers of Your Choice","Your Favorite :)"],
+  lunch: ["Garden Salad","Caesar Salad","Kimbap","Katsudon","Empanadas","Club Sandwich","Pastrami Sandwich","Falafel with Tahini","Bento Box","Pasta Salad","Banh Mi","Hamburger / Cheeseburger","Casado","Caprese","Tamales","Macaroni and Cheese","Tacos","Pad Thai","Kebabs","Bao","Ceviche","Soup and Salad","Smørrebrød","Pizza / Flatbread","PB&J Sandwich","Brisket","Poutine","Onigiri","Omurice","Spam Musubi","Grilled Cheese","Fried Tofu","Noodles with Peanut Sauce","Spaetzle","Quesadillas","Tahdig","Schnitzel","Bibimbap","Stuffed Peppers","Crab Cakes","Poke / Fish Bowl","Lettuce Wraps","Hot Dogs","Gyro","Spring Rolls","Stuffed Pitas","Fajita Burritos","Pierogi","Barbeque","Your Favorite :)"],
+  dinner: ["Tamales","Ratatouille","Pot Roast","Spaghetti","Fish and Chips","Grilled Fish on Rice","Paella","Shrimp Pasta","Curry (Japanese)","Curry (Thai)","Steamed Lobster / Crab","Steak and Potatoes","Chile Relleno","Seafood Broil","Jerk Chicken","Swedish Meatballs","Pasta Puttanesca","Lamb Tagine","Bulgogi","Briam","Bangers and Mash","Menemen","Tikka Masala","Gnocchi","Stir Fry","Moussaka","Chicken Paprikash","Enchiladas","Casserole","Eggplant Parmesan","Chili","Sloppy Joes","Turkey with Stuffing and Mashed Potatoes","Meatloaf","Chicken Pot Pie","Pork Chops with Applesauce","Dim Sum","Potstickers / Gyoza","Haggis","Roast Duck","Roast Brussel Sprouts","Spicy Tofu Stew","Spanakopita","Shrimp Scampi","Clam Bake","Lasagna","Breakfast (roll on Breakfast)","Soup (roll on Soup)","Your Favorite :)"],
+  dessert: ["Cannoli","Turkish Delight","Ice Cream","Sorbet","Fresh Fruit","Freshly-Baked Cookies","Milkshake","Horchata","Pie (Your Choice)","Cake (Your Choice)","Cheesecake","Dessert Bread","Tiramisu","Donuts","Chocolate Bar","Hard Candy (Fruity)","Hard Candy (Spicy)","Hard Candy (Sugar)","Hard Candy (Sour)","Tres Leches","Rice Pudding","Berry Trifle","Egg Custard","Flan","Beignets","Pacoca","Malabi","Baklava","Coffee and Biscotti","Eclair","Macaron","Mochi","Berry Tart","Mango Sticky Rice","Hot Chocolate","Strudel","Brownies","Creme Brulee","Lemon Bar","Chocolate Mousse","Banana Pudding","Dango","Jello","Dalgona","Dutch Baby","Churros","Fruit and Cheese","Cream Puff","Dessert Pizza","Your Favorite :)"],
+  snack: ["Pretzels","Raw Vegetables","Cheese (shredded)","Cheese (sliced)","Fresh Fruit","Chips/Crisps","Bread with Olive Oil","Kimchi","Herb Focaccia","Artichoke Dip","Dried Seaweed","Trail Mix","Fish-Shaped Crackers","Dried Noodles","Crackers and Goat Cheese","Dried Meat","Coffee","Tea","Sardines on Crackers","Pickles","Fried Green Tomatoes","Latkes","Prosciutto","Takoyaki","Elote","Arepa","Fried Plantains","Bungeo-ppang","Flatbread / Tortilla with Butter","Tostada","Croquette","Fries","Dry Cereal","Ceviche","Peanut Butter from the Jar","Popcorn","Cheese Puffs","Black Olives","Honey Stick","Pigs in a Blanket","Cookies and Milk","Sunflower Seeds","Fairy Bread","Toaster Pastry (Uncooked)","Lassi","Hummus","Onion Rings","Granola Bar","Dried Fruit","Your Favorite :)"],
+  soup: ["Potato Leek","Chicken Noodle","Albondigas","French Onion","Clam Chowder","Vegetarian","Broccoli Cheddar","Lobster Bisque","Ramen","Udon","Bird's Nest","Egg-Drop","Tortilla","Borscht","Bouillabaisse","Bún bò Huế","Cabbage","Chicken and Dumplings","Tomato","Fruktsoppa","Gazpacho","Gumbo","Kimchi Guk","Matzah Ball","Dakbokkeumtang","Melon","Miso","Nettle","Oxtail","Split-Pea","Phở","Tom Kha","Acquacotta","Avgolemono","Ash-e doogh","Meatball","Barley","Bean","Goulash","Wedding","Made with Leftovers","Sopas","Sinigang","Potato","Saimin","Rose Hip","Rassolnik","Butternut Squash","Pozole","Your Favorite :)"],
+  skill: ["Candle Magic","Emotion Magic","Enchantment","Fortune Telling","Garden Magic","Hat Tricks","Liquid Magic","Moon Magic","Rainbow Magic","Soupification","Sun Magic","Transmutation","Weather Magic","Creature Handling","Farming","Fishing","Foraging","Hunt","Mining","Riding","Seafaring","Academics","Admin","Art","First-Aid","Science","Searching","Lift & Push","Shoot","Strike","Throw","Wrestle","Barter","Flirt","Inquire","Performance","Public Speaking","Blacksmithing","Building","Carpentry","Cooking","Mechanic","Tailoring","Climb","Jump","Swim","Lie","Mischief","Sneak","Steal"],
+  plushieSize: ["Tiny","Small","Medium","Large","Huge"],
+  plushieTheme: ["Animal","Crop","Cute Pastry / Food","Dinosaur","Fantastical Ancestry","Livestock","Other"],
+  plushieFeature: ["Normal","Buttons for Eyes","Extra Soft","Pattern / Theme","Reversible","Sings when Hugged"],
+  creatureSize: ["Tiny","Small","Medium","Large","Huge"],
+  creaturePurpose: ["Gives Transportation","Helps with Chores","Hunts or Forages","Produces Crop","Produces Eggs","Produces Honey","Produces Milk","Produces Mineral","Produces Other","Produces Wool"],
+  creatureFeature: ["Has a Beak","Has a Crest","Has a Mane","Has a Pouch","Has a Shell","Has a Snout","Has a Tail","Has Antenna","Has Antlers","Has Claws","Has Dexterous fingers","Has Fangs","Has Feathers","Has Fins","Has Flippers","Has Floppy Ears","Has four leg-like appendages","Has Fur","Has Gills","Has Hooves","Has Horns","Has Multiple Tails","Has Pattern","Has Pinches","Has Pointed ears","Has Scales","Has six or more leg-like appendages","Has Spines","Has Talons","Has Tentacles","Has Trunk","Has Tusks","Has two arm-like appendages","Has two leg-like appendages","Has Vines","Has Whiskers","Has Wings","Is Bird-Like","Is Brightly Colored","Is Bug-Like","Is Cat-Like","Is Cow-Like","Is Dog-Like","Is Fish-Like","Is Lizard-Like","Is Mouse-like","Is Plant-like","Is Slime-Like","Is Snake-Like","Is Spider-Like"]
+};
+ 
+function rng(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+ 
+function rollOracle(type) {
+  let result = '';
+  let sub = '';
+ 
+  if (type === 'ask') {
+    const n = d100();
+    result = yesNoOracle(n);
+    sub = `(rolled ${n})`;
+    socket.emit('oracleRoll', { type: 'Spirit of the Forest', result, detail: sub });
+  } else if (type === 'weather') {
+    const season = rng(SEASONS);
+    result = rng(ORACLES.weather[season]);
+    sub = `${cap(season)} weather`;
+    socket.emit('oracleRoll', { type: 'Weather', result, detail: sub });
+  } else if (type === 'townName') {
+    result = `${rng(ORACLES.townNamePart1)} ${rng(ORACLES.townNamePart2)}`;
+    socket.emit('oracleRoll', { type: 'Town Name', result, detail: '' });
+  } else if (type === 'ancestry') {
+    const kind = rng(['fantastical','animal']);
+    result = rng(kind === 'fantastical' ? ORACLES.ancestryFantastical : ORACLES.ancestryAnimal);
+    sub = kind === 'fantastical' ? 'Fantastical Ancestry' : 'Animal Species';
+    socket.emit('oracleRoll', { type: 'Ancestry / Species', result, detail: sub });
+  } else if (type === 'names') {
+    const kind = rng(['cute','cool','funny']);
+    result = rng(kind === 'cute' ? ORACLES.namesCute : kind === 'cool' ? ORACLES.namesCool : ORACLES.namesFunny);
+    sub = `${cap(kind)} name`;
+    socket.emit('oracleRoll', { type: 'Townie Name', result, detail: sub });
+  } else if (type === 'relationship') {
+    const n = d100();
+    if (n <= 50) {
+      result = rng(ORACLES.relationshipBase);
+    } else {
+      const branch = rng(['familial','romantic']);
+      result = rng(branch === 'familial' ? ORACLES.relationshipFamilial : ORACLES.relationshipRomantic);
+      sub = branch === 'familial' ? 'Familial' : 'Romantic';
+    }
+    socket.emit('oracleRoll', { type: 'Relationship', result, detail: sub });
+  } else if (type === 'crops') {
+    const season = rng(SEASONS);
+    const table = { spring: ORACLES.cropsSpring, summer: ORACLES.cropsSummer, fall: ORACLES.cropsFall, winter: ORACLES.cropsWinter }[season];
+    result = rng(table);
+    sub = `${cap(season)} crop`;
+    socket.emit('oracleRoll', { type: 'Crop', result, detail: sub });
+  } else if (type === 'livestock') {
+    const n = d100();
+    if (n === 100) { result = rng(ORACLES.livestockFantastical); sub = 'Fantastical'; }
+    else { result = rng(ORACLES.livestockNormal); sub = ''; }
+    socket.emit('oracleRoll', { type: 'Livestock', result, detail: sub });
+  } else if (type === 'date') {
+    const seasons = ['Spring','Summer','Fall','Winter'];
+    const season = rng(seasons);
+    const day = Math.floor(Math.random() * 25) + 1;
+    result = `${season} ${day}`;
+    socket.emit('oracleRoll', { type: 'Random Date', result, detail: '' });
+  } else if (type === 'food') {
+    const meals = ['breakfast','lunch','dinner','dessert','snack','soup'];
+    const meal = rng(meals);
+    result = rng(ORACLES[meal]);
+    sub = cap(meal);
+    socket.emit('oracleRoll', { type: 'Random Food', result, detail: sub });
+  } else if (type === 'plushie') {
+    result = `${rng(ORACLES.plushieSize)} ${rng(ORACLES.plushieTheme)}-themed plushie`;
+    sub = rng(ORACLES.plushieFeature);
+    socket.emit('oracleRoll', { type: 'Plushie Creator', result, detail: sub });
+  } else if (type === 'creature') {
+    result = `${rng(ORACLES.creatureSize)} creature — ${rng(ORACLES.creaturePurpose)}`;
+    sub = rng(ORACLES.creatureFeature);
+    socket.emit('oracleRoll', { type: 'Creature Creator', result, detail: sub });
+  } else if (type === 'statArray') {
+    const shuffled = [...STATS].sort(() => Math.random() - 0.5);
+    result = `+3 ${shuffled[0]}, +2 ${shuffled[1]}/${shuffled[2]}, +1 ${shuffled[3]}/${shuffled[4]}`;
+    socket.emit('oracleRoll', { type: 'Random Stat Array', result, detail: '' });
+  } else {
+    result = rng(ORACLES[type]);
+    socket.emit('oracleRoll', { type: cap(type).replace(/([A-Z])/g,' $1'), result, detail: '' });
+  }
+ 
+  $('oracleResult').textContent = result;
+  $('oracleSub').textContent = sub;
+}
+ 
+// ── Spirit roll (special — public) ──────────────────────────
+function spiritRoll() {
+  const n = d100();
+  const result = yesNoOracle(n);
+  socket.emit('roll', { min: 1, max: 100, label: `Spirit of the Forest → ${result}` });
+  $('rngResult').textContent = n;
+  $('rngLabel').textContent = result;
+}
+ 
+function quickRoll(min, max) {
+  socket.emit('roll', { min, max });
+}
+function customRoll() {
+  const min = parseInt($('rngMin').value, 10) || 1;
+  const max = parseInt($('rngMax').value, 10) || 6;
+  socket.emit('roll', { min, max });
+}
+ 
+// ── Sidebar tabs ─────────────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.stab').forEach((t, i) => {
+    const ids = ['chars','dice','oracle'];
+    t.classList.toggle('active', ids[i] === id);
+  });
+  document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
+  $(`tab-${id}`).classList.add('active');
+}
+ 
+// ── Socket state ─────────────────────────────────────────────
+socket.on('state', ({ characters, online, world, calendar, assets, campaign }) => {
+  charactersData = characters;
+  worldData = world || {};
+  calendarData = calendar || calendarData;
+  assetsData = assets || assetsData;
+  if (campaign && campaign.name) syncCampaignName(campaign.name);
+  $('onlineCount').textContent = `${online} online`;
+ 
+  if (calendarData && !$('calendarOverlay').classList.contains('hidden')) renderCalendar();
+  if (!$('rulebookOverlay').classList.contains('hidden')) renderRulebook();
+  if (!$('mapOverlay').classList.contains('hidden')) renderMap();
+  if (!$('campaignsOverlay').classList.contains('hidden')) renderCampaigns();
+ 
+  // Restore the last character/player automatically on reload so a refresh
+  // drops you back into the same session instead of the join screen.
+  maybeAutoRejoin();
+ 
+  // Join overlay character list
+  if (!myCharacter) {
+    $('characterSelect').innerHTML = characters.map(c =>
+      `<option value="${c.name}" ${c.claimedBy ? 'disabled' : ''}>
+        ${c.emoji} ${c.name} (${c.type})${c.claimedBy ? ' — taken' : ''}
+      </option>`).join('');
+ 
+    // World summary
+    if (world && world.townName) {
+      $('worldSummary').style.display = 'block';
+      $('worldSummary').innerHTML =
+        `<strong>${world.townName}</strong> — ${world.ironValleyIs || ''}` +
+        (world.peopleAre ? `<br>People: ${world.peopleAre}` : '') +
+        (world.magicIs ? ` · Magic: ${world.magicIs}` : '');
+    }
+  }
+ 
+  // Character list sidebar
+  $('charList').innerHTML = characters.map(c => `
+    <div class="char-row ${c.name === myCharacter ? 'mine' : ''}">
+      <span>${c.emoji}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="char-name">${escHtml(c.name)}</div>
+        ${c.claimedBy ? `<div class="char-player">${escHtml(c.claimedBy)}</div>` : ''}
+      </div>
+      <span class="char-type-badge ${c.type === 'townie' ? 'townie' : ''}">${c.type}</span>
+      <button class="icon-btn" onclick="openSheet('${escHtml(c.name).replace(/'/g,"\\'")}')" title="View sheet">📄</button>
+      <button class="icon-btn danger" onclick="deleteCharacter('${escHtml(c.name).replace(/'/g,"\\'")}')" title="Delete character">🗑️</button>
+    </div>
+  `).join('');
+ 
+  // Update character switcher (only show available characters)
+  const campaignName = loadCampaignName();
+  const availableChars = characters.filter(c => !c.claimedBy);
+  const currentSavedChar = getSavedCharacter(campaignName);
+  $('charSwitcher').innerHTML = '<option value="">Select a character…</option>' +
+    availableChars.map(c => `<option value="${c.name}" ${currentSavedChar === c.name ? 'selected' : ''}>${c.emoji} ${escHtml(c.name)}</option>`).join('');
+ 
+  // Show switcher only when not already joined
+  if (!myCharacter) {
+    $('charSwitcherContainer').classList.remove('active');
+  } else {
+    $('charSwitcherContainer').classList.add('active');
+  }
+});
+ 
+// ── Quick Character Switch ────────────────────────────────────
+function quickSwitchCharacter() {
+  const selectedChar = $('charSwitcher').value;
+  if (!selectedChar) return;
+  const campaignName = loadCampaignName();
+  setSavedCharacter(campaignName, selectedChar);
+  // Trigger rejoin with the same player name
+  const playerName = $('playerName').value.trim() || loadPlayerName() || 'Player';
+  savePlayerName(playerName);
+  socket.emit('join', { playerName, characterName: selectedChar });
+}
+ 
+// ── Join ─────────────────────────────────────────────────────
+$('joinBtn').onclick = () => {
+  const pn = $('playerName').value.trim();
+  const cn = $('characterSelect').value;
+  if (!pn) { $('joinError').textContent = 'Please enter your name.'; return; }
+  if (!cn) { $('joinError').textContent = 'Please select a character.'; return; }
+  const campaignName = loadCampaignName();
+  setSavedCharacter(campaignName, cn);
+  savePlayerName(pn);
+  socket.emit('join', { playerName: pn, characterName: cn });
+};
+$('playerName').addEventListener('keydown', e => { if(e.key==='Enter') $('joinBtn').click(); });
+ 
+socket.on('joinError', msg => { $('joinError').textContent = msg; });
+socket.on('joined', ({ characterName }) => {
+  myCharacter = characterName;
+  const campaignName = loadCampaignName();
+  setSavedCharacter(campaignName, characterName);
+  hideOverlay('joinOverlay');
+});
+ 
+socket.on('gameReset', () => {
+  myCharacter = null;
+  autoRejoinTried = true; // don't auto-rejoin an archived character
+  const campaignName = loadCampaignName();
+  setSavedCharacter(campaignName, null);
+  $('joinError').textContent = '';
+  $('charSwitcherContainer').classList.remove('active');
+  showOverlay('joinOverlay');
+  hideOverlay('calendarOverlay');
+  activeCalSeason = 'spring';
+  appendSystem('🌱 New campaign started! Reloading character list…');
+});
+ 
+// ── Messages ─────────────────────────────────────────────────
+const messagesEl = $('messages');
+ 
+socket.on('system', text => appendSystem(text));
+ 
+socket.on('message', ({ characterName, playerName, emoji, color, text }) => {
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${characterName === myCharacter ? 'mine' : ''}`;
+  wrap.innerHTML = `
+    <div class="who" style="color:${color}">
+      ${emoji} ${escHtml(characterName)}
+      <span style="color:var(--ink-light);font-weight:400;font-size:11px;">(${escHtml(playerName)})</span>
+    </div>
+    <div class="bubble">${escHtml(text)}</div>`;
+  messagesEl.appendChild(wrap);
+  scrollMessages();
+});
+ 
+socket.on('diceRoll', ({ who, min, max, result, label }) => {
+  const div = document.createElement('div');
+  div.className = 'dice-msg';
+  const desc = label ? ` — ${label}` : ` (${min}–${max})`;
+  div.innerHTML = `🎲 <strong>${escHtml(who)}</strong> rolled${desc}: <span class="dice-val">${result}</span>`;
+  messagesEl.appendChild(div);
+  scrollMessages();
+  $('rngResult').textContent = result;
+  $('rngLabel').textContent = label || `d${max}`;
+});
+ 
+socket.on('oracleRoll', ({ who, type, result, detail }) => {
+  const div = document.createElement('div');
+  div.className = 'oracle-msg';
+  div.innerHTML = `🌿 <strong>${escHtml(who)}</strong> consulted the <em>${escHtml(type)}</em>:<br>
+    <span class="oracle-answer">${escHtml(result)}</span>${detail ? `<br><span style="font-size:11px;color:var(--ink-light)">${escHtml(detail)}</span>` : ''}`;
+  messagesEl.appendChild(div);
+  scrollMessages();
+});
+ 
+function appendSystem(text) {
+  const div = document.createElement('div');
+  div.className = 'system-msg';
+  div.textContent = text;
+  messagesEl.appendChild(div);
+  scrollMessages();
+}
+function scrollMessages() {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+ 
+// ── Composer ─────────────────────────────────────────────────
+$('sendBtn').onclick = sendMsg;
+$('textInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+});
+function sendMsg() {
+  const t = $('textInput').value.trim();
+  if (!t) return;
+  socket.emit('message', t);
+  $('textInput').value = '';
+}
+ 
+// ── Escape HTML ───────────────────────────────────────────────
+function escHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+ 
+// ── Quick "default player" slot creation ───────────────────────
+// Every field on the paper sheet already has an input in renderPlayerSheet();
+// these just get a blank, uniquely-named player into the roster in one click
+// instead of requiring the full "+ Add Character" form first.
+function nextDefaultPlayerName() {
+  const used = new Set((charactersData || []).map(c => c.name));
+  if (!used.has('New Player')) return 'New Player';
+  let n = 2;
+  while (used.has(`New Player ${n}`)) n++;
+  return `New Player ${n}`;
+}
+ 
+async function createDefaultPlayer() {
+  const name = nextDefaultPlayerName();
+  const res = await apiFetch('/api/characters', 'POST', { name, emoji: '🧍', color: '#6b7fcd', type: 'player' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Could not create a new player slot.');
+  return data;
+}
+ 
+// Sidebar version — for adding another blank slot mid-campaign. Opens the
+// full sheet right away so every field (name, ancestry, stats, skills…) is
+// right there to fill in.
+async function quickAddPlayer() {
+  try {
+    const data = await createDefaultPlayer();
+    openSheet(data.name);
+  } catch (e) { alert(e.message); }
+}
+ 
+// Join-screen version — lets a brand-new person create their own slot even
+// when the roster is empty, since the join dropdown can only offer characters
+// that already exist.
+async function quickJoinNewPlayer() {
+  $('joinError').textContent = '';
+  $('joinInfo').textContent = '';
+  try {
+    const data = await createDefaultPlayer();
+    const trySelect = () => {
+      const opt = [...$('characterSelect').options].find(o => o.value === data.name);
+      if (opt) { $('characterSelect').value = data.name; }
+      else setTimeout(trySelect, 50);
+    };
+    trySelect();
+    $('joinInfo').textContent = `Created "${data.name}" — enter your name and click Enter the Valley, then open its 📄 sheet afterward to fill in every detail.`;
+  } catch (e) { $('joinError').textContent = e.message; }
+}
+ 
+// ── New char form ─────────────────────────────────────────────
+function toggleNewCharForm() {
+  const f = $('newCharForm');
+  f.style.display = f.style.display === 'flex' ? 'none' : 'flex';
+  $('newCharError').textContent = '';
+}
+function cancelNewChar() { $('newCharForm').style.display = 'none'; }
+async function createChar() {
+  const name  = $('newCharName').value.trim();
+  const emoji = $('newCharEmoji').value.trim();
+  const color = $('newCharColor').value;
+  const type  = $('newCharType').value;
+  $('newCharError').textContent = '';
+  if (!name) { $('newCharError').textContent = 'Name is required.'; return; }
+  try {
+    const res = await apiFetch('/api/characters', 'POST', { name, emoji, color, type });
+    const data = await res.json();
+    if (!res.ok) { $('newCharError').textContent = data.error || 'Error.'; return; }
+    $('newCharName').value = '';
+    $('newCharEmoji').value = '';
+    $('newCharForm').style.display = 'none';
+  } catch { $('newCharError').textContent = 'Network error.'; }
+}
+ 
+// ══════════════════════════════════════════════════════════════
+//  CHARACTER SHEET MODAL
+// ══════════════════════════════════════════════════════════════
+ 
+let sheetOpenFor = null;
+let sheetData = null;
+ 
+document.getElementById('sheetCloseTop').onclick = closeSheet;
+ 
+window.openSheet = async function(name) {
+  try {
+    const res = await apiFetch('/api/characters/' + encodeURIComponent(name));
+    const data = await res.json();
+    if (!res.ok) return;
+    sheetOpenFor = name;
+    sheetData = JSON.parse(JSON.stringify(data)); // deep copy
+    renderSheet(data);
+    closeSidebar();
+    showOverlay('sheetOverlay');
+  } catch (e) { console.error(e); }
+};
+ 
+function closeSheet() {
+  hideOverlay('sheetOverlay');
+  sheetOpenFor = null;
+  sheetData = null;
+}
+ 
+// Delete a character from the roster (players or townies). Confirms first, and
+// if you delete the character you're currently playing, drops you back to join.
+async function deleteCharacter(name) {
+  const label = name === myCharacter ? `${name} (the character you're playing)` : name;
+  if (!confirm(`Delete "${label}"?\n\nThis permanently removes the character and their sheet. This can't be undone.`)) return;
+  try {
+    const res = await apiFetch('/api/characters/' + encodeURIComponent(name), 'DELETE');
+    if (!res.ok) { alert('Failed to delete character.'); return; }
+    if (sheetOpenFor === name) closeSheet();
+    if (myCharacter === name) {
+      myCharacter = null;
+      const campaignName = loadCampaignName();
+      setSavedCharacter(campaignName, null);
+      autoRejoinTried = true;
+      showOverlay('joinOverlay');
+    }
+  } catch { alert('Network error deleting character.'); }
+}
+ 
+function renderSheet(char) {
+  $('sheetTitle').textContent = `${char.emoji || ''} ${char.name}`;
+  const body = $('sheetBody');
+ 
+  if (char.type === 'townie') {
+    renderTownieSheet(body, char);
+  } else {
+    renderPlayerSheet(body, char);
+  }
+}
+ 
+// ── PLAYER SHEET ──────────────────────────────────────────────
+function renderPlayerSheet(body, char) {
+  const s = char.sheet || {};
+  const stats = s.stats || {};
+  const skills = s.skills || [];
+  const promises = s.promises || [];
+ 
+  body.innerHTML = `
+    <!-- World Truths / Character Truths -->
+    <div class="sheet-section">
+      <div class="sheet-section-title">🏡 Character Truths</div>
+      <div class="sheet-grid cols2">
+        <div class="sheet-field"><label>Name</label><input id="sName" value="${escHtml(char.name||'')}" maxlength="30" /></div>
+        <div class="sheet-field"><label>Ancestry / Species</label><input id="sSpecies" value="${escHtml(s.species||'')}" /></div>
+        <div class="sheet-field"><label>Pronouns</label><input id="sPronouns" value="${escHtml(s.pronouns||'')}" /></div>
+        <div class="sheet-field"><label>Gender Presentation</label><input id="sGender" value="${escHtml(s.genderPresentation||'')}" /></div>
+        <div class="sheet-field"><label>Birthday</label><input id="sBirthday" value="${escHtml(s.birthday||'')}" /></div>
+      </div>
+      <div class="sheet-grid cols2" style="margin-top:8px;">
+        <div class="sheet-field"><label>Emoji</label><input id="sEmoji" placeholder="🧍" value="${escHtml(char.emoji||'')}" maxlength="4" /></div>
+        <div class="sheet-field"><label>Color</label><input id="sColor" type="color" value="${char.color||'#6b7fcd'}" style="padding:2px;" /></div>
+      </div>
+      <div class="sheet-grid" style="margin-top:8px;">
+        <div class="sheet-field"><label>Why did you come to Iron Valley?</label><input id="sWhyLeft" value="${escHtml(s.whyLeft||'')}" /></div>
+        <div class="sheet-field"><label>Where are you staying?</label><input id="sStayingWhere" value="${escHtml(s.stayingWhere||'')}" /></div>
+        <div class="sheet-field"><label>What's in your backpack?</label><input id="sBackpack" value="${escHtml(s.backpack||'')}" /></div>
+        <div class="sheet-field"><label>How long do you plan to stay?</label><input id="sHowLong" value="${escHtml(s.howLongStay||'')}" /></div>
+      </div>
+    </div>
+ 
+    <!-- Stats -->
+    <div class="sheet-section">
+      <div class="sheet-section-title">📊 Stats</div>
+      <div class="stats-row">
+        ${STATS.map(st => `
+          <div class="stat-box">
+            <label>${st}</label>
+            <input id="stat${st}" value="${escHtml(stats[st]||'')}" placeholder="+0" maxlength="3" />
+          </div>`).join('')}
+      </div>
+    </div>
+ 
+    <!-- Satisfaction -->
+    <div class="sheet-section">
+      <div class="sheet-section-title">⭐ Satisfaction</div>
+      <div class="satisfaction-row">
+        <label>Current</label>
+        <input type="number" id="sSatisfaction" value="${s.satisfaction||0}" min="0" />
+        <span class="sat-costs">Upgrade skill: cost ×2 · ×3 · ×5</span>
+      </div>
+    </div>
+ 
+    <!-- Skills -->
+    <div class="sheet-section">
+      <div class="sheet-section-title">🛠 Skills</div>
+      <div style="display:flex;gap:40px;font-size:10px;color:var(--ink-light);margin-bottom:4px;padding-left:8px;">
+        <span>+1 on roll</span><span>+1 tick on hit</span><span>Time Passes only on Miss</span>
+      </div>
+      <div class="skills-list" id="skillsList"></div>
+      <div class="skill-add">
+        <input id="newSkillName" placeholder="Skill name…" maxlength="30" />
+        <button onclick="addSkill()">+ Add</button>
+      </div>
+    </div>
+ 
+    <!-- Promises -->
+    <div class="sheet-section">
+      <div class="sheet-section-title">📜 Promises</div>
+      <div style="font-size:10px;color:var(--ink-light);margin-bottom:4px;padding-left:8px;">Each box holds up to 4 ticks — click a segment to mark progress, click it again to back off one tick</div>
+      <div class="promises-list" id="promisesList"></div>
+      <div class="promise-add">
+        <input id="newPromiseName" placeholder="Promise name…" maxlength="60" />
+        <select id="newPromiseBoxes">
+          <option value="1">1 box</option>
+          <option value="2">2 boxes</option>
+          <option value="3" selected>3 boxes</option>
+          <option value="6">6 boxes</option>
+          <option value="10">10 boxes</option>
+        </select>
+        <button onclick="addPromise()">+ Add</button>
+      </div>
+    </div>
+ 
+    <!-- Notes -->
+    <div class="sheet-section">
+      <div class="sheet-section-title">📝 Notes</div>
+      <div class="sheet-field"><textarea id="sNotes" rows="4">${escHtml(s.notes||'')}</textarea></div>
+    </div>
+ 
+    <div class="sheet-save-row">
+      <button class="btn-danger" style="margin-right:auto;" onclick="deleteCharacter('${escHtml(char.name).replace(/'/g,"\\'")}')">🗑️ Delete</button>
+      <button class="btn-secondary" onclick="closeSheet()">Close</button>
+      <button class="btn-primary" onclick="saveSheet()">Save Sheet</button>
+    </div>
+  `;
+ 
+  renderSkills(skills);
+  renderPromises(promises);
+}
+ 
+// ── Skills ─────────────────────────────────────────────────────
+function renderSkills(skills) {
+  const list = $('skillsList');
+  if (!list) return;
+  list.innerHTML = skills.map((sk, i) => `
+    <div class="skill-row" id="skill-row-${i}">
+      <span class="skill-name">${escHtml(sk.name)}</span>
+      <div>
+        <div class="skill-labels"><span class="skill-label">+1</span><span class="skill-label">tick</span><span class="skill-label">miss</span></div>
+        <div class="skill-ticks">
+          ${[1,2,3].map(t => `
+            <div class="skill-tick t${t} ${sk[`tick${t}`] ? 'active' : ''}" onclick="toggleSkillTick(${i},${t})" title="Tier ${t}">
+              ${sk[`tick${t}`] ? '✓' : ''}
+            </div>`).join('')}
+        </div>
+      </div>
+      <button class="skill-delete" onclick="deleteSkill(${i})" title="Remove skill">✕</button>
+    </div>
+  `).join('');
+}
+ 
+function getCurrentSkills() {
+  return sheetData.sheet.skills || [];
+}
+ 
+function toggleSkillTick(idx, tier) {
+  const skills = sheetData.sheet.skills;
+  const key = `tick${tier}`;
+  skills[idx][key] = !skills[idx][key];
+  renderSkills(skills);
+}
+ 
+function deleteSkill(idx) {
+  sheetData.sheet.skills.splice(idx, 1);
+  renderSkills(sheetData.sheet.skills);
+}
+ 
+function addSkill() {
+  const name = $('newSkillName').value.trim();
+  if (!name) return;
+  sheetData.sheet.skills.push({ name, tick1: false, tick2: false, tick3: false });
+  renderSkills(sheetData.sheet.skills);
+  $('newSkillName').value = '';
+}
+ 
+// ── Promises ───────────────────────────────────────────────────
+// Per the rulebook, progress boxes are filled left to right and each box can
+// hold a maximum of FOUR ticks — a box only counts as "filled" once all 4
+// ticks are marked. Older saved data stored boxes as plain 0/1 (filled or
+// not); treat any leftover truthy value as a fully-ticked box so nothing
+// looks broken after upgrading.
+function normalizeBoxTicks(v) {
+  const n = typeof v === 'boolean' ? (v ? 4 : 0) : (parseInt(v, 10) || 0);
+  return clamp(n, 0, 4);
+}
+ 
+function renderPromises(promises) {
+  const list = $('promisesList');
+  if (!list) return;
+  list.innerHTML = promises.map((p, i) => {
+    const boxes = (p.boxes || []).map((v, j) => {
+      const ticks = normalizeBoxTicks(v);
+      const complete = ticks >= 4;
+      const segs = [1,2,3,4].map(q =>
+        `<div class="promise-tick ${q <= ticks ? 'filled' : ''}" onclick="event.stopPropagation();toggleBox(${i},${j},${q})"></div>`
+      ).join('');
+      return `<div class="promise-box ${complete ? 'complete' : ''}" title="${ticks}/4 ticks">${segs}</div>`;
+    }).join('');
+    const filledCount = (p.boxes || []).filter(v => normalizeBoxTicks(v) >= 4).length;
+    return `
+      <div class="promise-card" id="promise-card-${i}">
+        <div class="promise-header">
+          <input class="promise-name-input" value="${escHtml(p.name||'')}" onchange="updatePromiseName(${i},this.value)" placeholder="Promise name…" />
+          <button class="promise-delete" onclick="deletePromise(${i})" title="Remove">✕</button>
+        </div>
+        <div class="promise-boxes" id="promise-boxes-${i}">${boxes}</div>
+        <div class="promise-footer">
+          <span style="font-size:10px;color:var(--ink-light);">${filledCount}/${(p.boxes||[]).length} boxes filled</span>
+          <button class="promise-size-btn" onclick="addBox(${i})">+ box</button>
+          <button class="promise-size-btn" onclick="removeBox(${i})">- box</button>
+        </div>
+        <textarea class="promise-notes-input" placeholder="Notes & steps…" onchange="updatePromiseNotes(${i},this.value)">${escHtml(p.notes||'')}</textarea>
+      </div>`;
+  }).join('');
+}
+ 
+// Clicking a tick segment sets that box to that many ticks (0-4). Clicking
+// the same segment again (the one that's currently the highest filled tick)
+// backs it off by one, so you can correct an over-click without a separate
+// undo control.
+function toggleBox(pi, bi, quarter) {
+  const boxes = sheetData.sheet.promises[pi].boxes;
+  const current = normalizeBoxTicks(boxes[bi]);
+  boxes[bi] = cycleTick(current, quarter);
+  renderPromises(sheetData.sheet.promises);
+}
+function addBox(pi) {
+  sheetData.sheet.promises[pi].boxes.push(0);
+  renderPromises(sheetData.sheet.promises);
+}
+function removeBox(pi) {
+  const boxes = sheetData.sheet.promises[pi].boxes;
+  if (boxes.length > 1) { boxes.pop(); renderPromises(sheetData.sheet.promises); }
+}
+function updatePromiseName(pi, val) { sheetData.sheet.promises[pi].name = val; }
+function updatePromiseNotes(pi, val) { sheetData.sheet.promises[pi].notes = val; }
+function deletePromise(pi) {
+  sheetData.sheet.promises.splice(pi, 1);
+  renderPromises(sheetData.sheet.promises);
+}
+function addPromise() {
+  const name = $('newPromiseName').value.trim();
+  const n = parseInt($('newPromiseBoxes').value, 10) || 3;
+  if (!name) return;
+  sheetData.sheet.promises.push({ name, boxes: Array(n).fill(0), notes: '' });
+  renderPromises(sheetData.sheet.promises);
+  $('newPromiseName').value = '';
+}
+ 
+// ── TOWNIE SHEET ──────────────────────────────────────────────
+function renderTownieSheet(body, char) {
+  const s = char.sheet || {};
+  if (!sheetData.sheet) sheetData.sheet = {};
+  if (!sheetData.sheet.relationships || typeof sheetData.sheet.relationships !== 'object') {
+    sheetData.sheet.relationships = {};
+  }
+ 
+  body.innerHTML = `
+    <div class="sheet-section">
+      <div class="sheet-section-title">🧑 Townie Details</div>
+      <div class="sheet-grid cols2">
+        <div class="sheet-field"><label>Name</label><input id="sName" value="${escHtml(char.name||'')}" maxlength="30" /></div>
+        <div class="sheet-field"><label>Ancestry / Species</label><input id="sSpecies" value="${escHtml(s.species||'')}" /></div>
+        <div class="sheet-field"><label>Pronouns</label><input id="sPronouns" value="${escHtml(s.pronouns||'')}" /></div>
+        <div class="sheet-field"><label>Gender Presentation</label><input id="sGender" value="${escHtml(s.genderPresentation||'')}" /></div>
+        <div class="sheet-field"><label>Age</label><input id="sTAge" value="${escHtml(s.age||'')}" /></div>
+        <div class="sheet-field"><label>Job / Role</label><input id="sTJob" value="${escHtml(s.job||'')}" /></div>
+        <div class="sheet-field"><label>Birthday</label><input id="sBirthday" value="${escHtml(s.birthday||'')}" /></div>
+        <div class="sheet-field"><label>Emoji</label><input id="sEmoji" placeholder="🧑" value="${escHtml(char.emoji||'')}" maxlength="4" /></div>
+        <div class="sheet-field"><label>Color</label><input id="sColor" type="color" value="${char.color||'#6b7fcd'}" style="padding:2px;" /></div>
+      </div>
+    </div>
+ 
+    <div class="sheet-section">
+      <div class="sheet-section-title">💛 Favor & Hearts — per player</div>
+      <p style="font-size:11px;color:var(--ink-light);margin-bottom:8px;">Each player character tracks their own favor & heart events with this townie. Spend 10 favor to nurture a bond (fill a heart).</p>
+      <div id="relList"></div>
+    </div>
+ 
+    <div class="sheet-section">
+      <div class="sheet-section-title">📝 Notes</div>
+      <div class="sheet-field"><textarea id="sNotes" rows="5">${escHtml(s.notes||'')}</textarea></div>
+    </div>
+ 
+    <div class="sheet-save-row">
+      <button class="btn-danger" style="margin-right:auto;" onclick="deleteCharacter('${escHtml(char.name).replace(/'/g,"\\'")}')">🗑️ Delete</button>
+      <button class="btn-secondary" onclick="closeSheet()">Close</button>
+      <button class="btn-primary" onclick="saveSheet()">Save Sheet</button>
+    </div>
+  `;
+ 
+  renderRelationships();
+}
+ 
+// The favor map is keyed by player character name; ensure a slot exists.
+function relFor(playerName) {
+  const rels = sheetData.sheet.relationships;
+  if (!rels[playerName]) rels[playerName] = { favor: 0, hearts: 0 };
+  return rels[playerName];
+}
+ 
+// One favor+hearts block per player character currently in the roster.
+function renderRelationships() {
+  const list = $('relList');
+  if (!list) return;
+  const players = (charactersData || []).filter(c => c.type === 'player');
+  if (!players.length) {
+    list.innerHTML = `<div style="font-size:12px;color:var(--ink-light);">No player characters yet — add one to start tracking favor.</div>`;
+    return;
+  }
+  list.innerHTML = players.map(p => {
+    const key = p.name;
+    const rel = (sheetData.sheet.relationships[key]) || { favor: 0, hearts: 0 };
+    const favor = rel.favor || 0;
+    const hearts = rel.hearts || 0;
+    const kAttr = escHtml(key).replace(/'/g,"\\'");
+    return `
+      <div class="rel-card">
+        <div class="rel-head">
+          <span>${p.emoji || '🧍'}</span>
+          <span class="rel-name">${escHtml(key)}</span>
+        </div>
+        <div class="favor-row">
+          <label>Favor</label>
+          <input type="number" min="0" value="${favor}" onchange="setRelFavor('${kAttr}', this.value)" />
+          <div class="favor-btns">
+            <button onclick="adjustRelFavor('${kAttr}', -1)">−</button>
+            <button onclick="adjustRelFavor('${kAttr}', 1)">＋</button>
+            <button onclick="nurtureRelBond('${kAttr}')" title="Spend 10 favor to fill a heart">❤️ Nurture Bond</button>
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-light);margin-bottom:6px;">Heart Events (${hearts}/10)</div>
+          <div class="hearts-row">
+            ${Array(10).fill(0).map((_,i) =>
+              `<span class="heart-btn" onclick="toggleRelHeart('${kAttr}', ${i})">${i < hearts ? '❤️' : '🤍'}</span>`
+            ).join('')}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+ 
+function setRelFavor(playerName, value) {
+  relFor(playerName).favor = Math.max(0, parseInt(value, 10) || 0);
+  renderRelationships();
+}
+ 
+function adjustRelFavor(playerName, delta) {
+  const rel = relFor(playerName);
+  rel.favor = Math.max(0, (rel.favor || 0) + delta);
+  renderRelationships();
+}
+ 
+function toggleRelHeart(playerName, idx) {
+  const rel = relFor(playerName);
+  // Clicking the last filled heart clears it; otherwise fill up to the click.
+  rel.hearts = (rel.hearts === idx + 1) ? idx : idx + 1;
+  renderRelationships();
+}
+ 
+function nurtureRelBond(playerName) {
+  const rel = relFor(playerName);
+  if ((rel.favor || 0) < 10) { alert('You need at least 10 favor to nurture a bond.'); return; }
+  if ((rel.hearts || 0) >= 10) { alert('All heart events are already filled!'); return; }
+  rel.favor -= 10;
+  rel.hearts += 1;
+  renderRelationships();
+}
+ 
+// ── Save sheet ────────────────────────────────────────────────
+async function saveSheet() {
+  if (!sheetOpenFor || !sheetData) return;
+ 
+  const char = charactersData.find(c => c.name === sheetOpenFor);
+  const type = char ? char.type : 'player';
+  const newName = ($('sName') ? $('sName').value.trim() : '') || sheetOpenFor;
+  const newEmoji = $('sEmoji') ? $('sEmoji').value.trim() : '';
+  const newColor = $('sColor') ? $('sColor').value : '';
+ 
+  let sheet;
+  if (type === 'townie') {
+    sheet = {
+      ...sheetData.sheet,
+      species: $('sSpecies').value,
+      pronouns: $('sPronouns').value,
+      genderPresentation: $('sGender').value,
+      age: $('sTAge').value,
+      job: $('sTJob').value,
+      birthday: $('sBirthday').value,
+      relationships: sheetData.sheet.relationships || {},
+      notes: $('sNotes').value,
+    };
+  } else {
+    const stats = {};
+    STATS.forEach(st => {
+      stats[st] = $(`stat${st}`).value;
+    });
+    sheet = {
+      ...sheetData.sheet,
+      species: $('sSpecies').value,
+      pronouns: $('sPronouns').value,
+      genderPresentation: $('sGender').value,
+      birthday: $('sBirthday').value,
+      whyLeft: $('sWhyLeft').value,
+      stayingWhere: $('sStayingWhere').value,
+      backpack: $('sBackpack').value,
+      howLongStay: $('sHowLong').value,
+      stats,
+      satisfaction: parseInt($('sSatisfaction').value)||0,
+      skills: sheetData.sheet.skills || [],
+      promises: sheetData.sheet.promises || [],
+      notes: $('sNotes').value,
+    };
+  }
+ 
+  try {
+    const res = await apiFetch('/api/characters/' + encodeURIComponent(sheetOpenFor) + '/sheet', 'PUT', { sheet, name: newName, emoji: newEmoji, color: newColor });
+    const data = await res.json();
+    if (res.ok) {
+      if (myCharacter === sheetOpenFor && newName !== sheetOpenFor) myCharacter = newName;
+      closeSheet();
+    } else {
+      alert(data.error || 'Failed to save sheet.');
+    }
+  } catch { alert('Network error saving sheet.'); }
+}
+ 
+// ══════════════════════════════════════════════════════════════
+//  CALENDAR
+// ══════════════════════════════════════════════════════════════
+let calendarData = null;
+let activeCalSeason = 'spring';
+const SEASON_META = {
+  spring: { label: '🌸 Spring', emoji: '🌸' },
+  summer: { label: '🌞 Summer', emoji: '🌞' },
+  fall: { label: '🍂 Fall', emoji: '🍂' },
+  winter: { label: '⛄ Winter', emoji: '⛄' },
+};
+ 
+function openCalendar() {
+  if (calendarData) activeCalSeason = calendarData.current.season;
+  renderCalendar();
+  showOverlay('calendarOverlay');
+}
+function closeCalendar() { hideOverlay('calendarOverlay'); }
+ 
+function switchCalSeason(season) {
+  activeCalSeason = season;
+  renderCalendar();
+}
+ 
+function renderCalendar() {
+  if (!calendarData) return;
+  const cur = calendarData.current;
+ 
+  $('calToday').innerHTML = `
+    <span>📍 Today is <strong>${SEASON_META[cur.season].label}, Day ${cur.day}</strong>${
+      (calendarData.seasons[cur.season].find(d => d.day === cur.day) || {}).label
+        ? ' — ' + escHtml((calendarData.seasons[cur.season].find(d => d.day === cur.day) || {}).label)
+        : ''
+    }</span>
+    <button onclick="timePasses()">⏳ Time Passes (+1 tick)</button>
+  `;
+ 
+  $('calSeasonTabs').innerHTML = Object.keys(SEASON_META).map(s => `
+    <div class="cal-season-tab ${s} ${s === activeCalSeason ? 'active' : ''}" onclick="switchCalSeason('${s}')">${SEASON_META[s].label}</div>
+  `).join('');
+ 
+  const days = calendarData.seasons[activeCalSeason];
+  const weekdayHeader = ['Bread Day','Friends Day','Soup Day','Laundry Day','Rest Day']
+    .map(w => `<div class="cal-weekday-label">${w}</div>`).join('');
+ 
+  const dayCards = days.map(d => {
+    const isToday = activeCalSeason === cur.season && d.day === cur.day;
+    const ticks = clamp(d.ticks || 0, 0, 4);
+    const tickEls = [1,2,3,4].map(q => `<div class="cal-tick ${q <= ticks ? 'filled' : ''}" onclick="toggleCalTick('${activeCalSeason}',${d.day},${q})"></div>`).join('');
+    return `
+      <div class="cal-day ${isToday ? 'today' : ''} ${ticks >= 4 ? 'day-over' : ''}">
+        <div class="cal-day-head">
+          <span class="cal-day-num">${d.day}</span>
+          <button class="cal-star-btn" title="Jump current day here" onclick="jumpToDay('${activeCalSeason}',${d.day})">${isToday ? '★' : '☆'}</button>
+        </div>
+        <textarea class="cal-label-input" placeholder="…" onchange="updateCalLabel('${activeCalSeason}',${d.day},this.value)">${escHtml(d.label||'')}</textarea>
+        <div class="cal-ticks">${tickEls}</div>
+      </div>`;
+  }).join('');
+ 
+  $('calGrid').innerHTML = weekdayHeader + dayCards;
+}
+ 
+async function saveCalendar() {
+  try {
+    await apiFetch('/api/calendar', 'PUT', calendarData);
+  } catch { /* next state broadcast will resync if this fails */ }
+}
+ 
+function toggleCalTick(season, day, quarter) {
+  const d = calendarData.seasons[season].find(x => x.day === day);
+  const current = clamp(d.ticks || 0, 0, 4);
+  d.ticks = cycleTick(current, quarter);
+  renderCalendar();
+  saveCalendar();
+}
+ 
+function updateCalLabel(season, day, value) {
+  const d = calendarData.seasons[season].find(x => x.day === day);
+  d.label = value;
+  saveCalendar();
+}
+ 
+function jumpToDay(season, day) {
+  calendarData.current = { season, day };
+  renderCalendar();
+  saveCalendar();
+}
+ 
+// Mirrors the move Time Passes: mark 1 tick on the current day; the server
+// automatically rolls the day (and season, if needed) over on the 4th tick.
+async function timePasses() {
+  try {
+    const res = await apiFetch('/api/calendar/time-passes', 'POST');
+    const data = await res.json();
+    if (res.ok) { calendarData = data; activeCalSeason = data.current.season; renderCalendar(); }
+  } catch { alert('Network error — could not mark Time Passes.'); }
+}
+ 
+// ══════════════════════════════════════════════════════════════
+//  WORLD TRUTHS
+// ══════════════════════════════════════════════════════════════
+function openWorld() {
+  $('wTownName').value = worldData.townName || '';
+  $('wIronValleyIs').value = worldData.ironValleyIs || '';
+  $('wPeopleAre').value = worldData.peopleAre || '';
+  $('wMagicIs').value = worldData.magicIs || '';
+  showOverlay('worldOverlay');
+}
+function closeWorld() { hideOverlay('worldOverlay'); }
+async function saveWorld() {
+  const world = {
+    townName: $('wTownName').value,
+    ironValleyIs: $('wIronValleyIs').value,
+    peopleAre: $('wPeopleAre').value,
+    magicIs: $('wMagicIs').value,
+  };
+  await apiFetch('/api/world', 'PUT', world);
+  closeWorld();
+}
+ 
+// ══════════════════════════════════════════════════════════════
+//  NEW GAME / CAMPAIGNS
+// ══════════════════════════════════════════════════════════════
+function openNewGame() { showOverlay('newGameOverlay'); }
+function closeNewGame() { hideOverlay('newGameOverlay'); }
+async function confirmNewGame() {
+  closeNewGame();
+  try {
+    const res = await apiFetch('/api/newgame', 'POST');
+    const data = await res.json();
+    appendSystem(`🌱 Campaign archived to: archives/${data.archivedTo}`);
+    // After reset, prompt to set world truths
+    setTimeout(() => openWorld(), 800);
+  } catch { alert('Error starting new game.'); }
+}
+ 
+// ── Campaign picker ───────────────────────────────────────────
+function openCampaigns() {
+  $('campaignRenameInput').value = loadCampaignName();
+  $('campaignsError').textContent = '';
+  showOverlay('campaignsOverlay');
+  renderCampaigns();
+}
+function closeCampaigns() { hideOverlay('campaignsOverlay'); }
+ 
+async function renderCampaigns() {
+  const list = $('campaignsList');
+  list.innerHTML = '<div style="font-size:12px;color:var(--ink-light);">Loading…</div>';
+  try {
+    const res = await apiFetch('/api/campaigns');
+    const data = await res.json();
+    const active = (data.active && data.active.name) || loadCampaignName();
+    const archived = data.archived || [];
+    let html = `
+      <div class="campaign-item active">
+        <div style="flex:1;min-width:0;">
+          <div class="campaign-name">${escHtml(active)}</div>
+          <div class="campaign-meta">Currently active</div>
+        </div>
+        <span class="char-type-badge">active</span>
+      </div>`;
+    if (!archived.length) {
+      html += `<div style="font-size:12px;color:var(--ink-light);margin-top:8px;">No other saved campaigns yet. “New Game” archives the current campaign so you can switch back to it here.</div>`;
+    } else {
+      html += archived.map(c => `
+        <div class="campaign-item">
+          <div style="flex:1;min-width:0;">
+            <div class="campaign-name">${escHtml(c.name)}</div>
+            <div class="campaign-meta">${c.characterCount} character${c.characterCount === 1 ? '' : 's'} · saved ${escHtml(c.stamp)}</div>
+          </div>
+          <button class="btn-secondary" style="width:auto;padding:7px 14px;" onclick="switchCampaign('${escHtml(c.stamp).replace(/'/g,"\\'")}', '${escHtml(c.name).replace(/'/g,"\\'")}')">Load</button>
+        </div>`).join('');
+    }
+    list.innerHTML = html;
+  } catch {
+    list.innerHTML = '<div class="form-error">Could not load campaigns.</div>';
+  }
+}
+ 
+async function renameCampaign() {
+  const name = $('campaignRenameInput').value.trim();
+  if (!name) { $('campaignsError').textContent = 'Please enter a campaign name.'; return; }
+  $('campaignsError').textContent = '';
+  try {
+    const res = await apiFetch('/api/campaign', 'PUT', { name });
+    const data = await res.json();
+    if (!res.ok) { $('campaignsError').textContent = data.error || 'Rename failed.'; return; }
+    syncCampaignName(data.name);
+    renderCampaigns();
+  } catch { $('campaignsError').textContent = 'Network error.'; }
+}
+ 
+async function switchCampaign(stamp, name) {
+  if (!confirm(`Load campaign “${name}”?\n\nThis archives the current campaign and swaps in this one. Everyone at the table will be returned to character select.`)) return;
+  $('campaignsError').textContent = 'Switching…';
+  try {
+    const res = await apiFetch('/api/campaigns/switch', 'POST', { stamp });
+    const data = await res.json();
+    if (!res.ok) { $('campaignsError').textContent = data.error || 'Switch failed.'; return; }
+    closeCampaigns();
+    // gameReset handler resets local join state; state broadcast refreshes lists.
+  } catch { $('campaignsError').textContent = 'Network error.'; }
+}
+ 
+// ══════════════════════════════════════════════════════════════
+//  RULEBOOK (PDF) + MAP
+// ══════════════════════════════════════════════════════════════
+let pdfDoc = null;
+let pdfPageNum = 1;
+let pdfScale = 1.2;
+let pdfRendering = false;
+let pdfLoadedUrl = null;
+let pdfLibPromise = null;
+ 
+function loadPdfLib() {
+  if (!pdfLibPromise) {
+    pdfLibPromise = import('/pdf.mjs').then(lib => {
+      lib.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
+      return lib;
+    });
+  }
+  return pdfLibPromise;
+}
+ 
+async function renderPdfPage() {
+  if (!pdfDoc || pdfRendering) return;
+  pdfRendering = true;
+  try {
+    const page = await pdfDoc.getPage(pdfPageNum);
+    const viewport = page.getViewport({ scale: pdfScale });
+    const canvas = $('pdfCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    $('pdfPageInfo').textContent = `Page ${pdfPageNum} / ${pdfDoc.numPages}`;
+  } catch (e) {
+    $('rulebookError').textContent = 'Could not render this page.';
+  } finally {
+    pdfRendering = false;
+  }
+}
+ 
+async function renderRulebook() {
+  $('rulebookError').textContent = '';
+  const url = assetsData.rulebook;
+  if (!url) {
+    $('rulebookEmpty').style.display = 'block';
+    $('rulebookViewer').style.display = 'none';
+    pdfDoc = null;
+    pdfLoadedUrl = null;
+    return;
+  }
+  $('rulebookEmpty').style.display = 'none';
+  $('rulebookViewer').style.display = 'block';
+  if (url === pdfLoadedUrl && pdfDoc) return; // already loaded
+  try {
+    const lib = await loadPdfLib();
+    pdfDoc = await lib.getDocument({ url }).promise;
+    pdfLoadedUrl = url;
+    pdfPageNum = 1;
+    await renderPdfPage();
+  } catch (e) {
+    $('rulebookError').textContent = 'Could not load the rulebook PDF.';
+  }
+}
+ 
+function pdfPrev() {
+  if (pdfDoc && pdfPageNum > 1) { pdfPageNum--; renderPdfPage(); }
+}
+function pdfNext() {
+  if (pdfDoc && pdfPageNum < pdfDoc.numPages) { pdfPageNum++; renderPdfPage(); }
+}
+function pdfZoom(delta) {
+  pdfScale = Math.min(3, Math.max(0.5, pdfScale + delta));
+  renderPdfPage();
+}
+ 
+function openRulebook() {
+  $('rulebookOverlay').classList.remove('hidden');
+  renderRulebook();
+}
+function closeRulebook() { $('rulebookOverlay').classList.add('hidden'); }
+ 
+async function uploadRulebook(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  $('rulebookError').textContent = 'Uploading…';
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/upload/rulebook', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) { $('rulebookError').textContent = data.error || 'Upload failed.'; return; }
+    assetsData = data;
+    $('rulebookError').textContent = '';
+    renderRulebook();
+  } catch {
+    $('rulebookError').textContent = 'Upload failed.';
+  } finally {
+    input.value = '';
+  }
+}
+ 
+function renderMap() {
+  $('mapError').textContent = '';
+  const url = assetsData.map;
+  if (!url) {
+    $('mapEmpty').style.display = 'block';
+    $('mapViewer').style.display = 'none';
+    return;
+  }
+  $('mapEmpty').style.display = 'none';
+  $('mapViewer').style.display = 'block';
+  if ($('mapImage').getAttribute('src') !== url) $('mapImage').src = url;
+}
+ 
+function openMap() {
+  $('mapOverlay').classList.remove('hidden');
+  renderMap();
+}
+function closeMap() { $('mapOverlay').classList.add('hidden'); }
+ 
+async function uploadMap(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  $('mapError').textContent = 'Uploading…';
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/upload/map', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) { $('mapError').textContent = data.error || 'Upload failed.'; return; }
+    assetsData = data;
+    $('mapError').textContent = '';
+    renderMap();
+  } catch {
+    $('mapError').textContent = 'Upload failed.';
+  } finally {
+    input.value = '';
+  }
+}
+ 
+// ══════════════════════════════════════════════════════════════
+//  INITIALIZATION
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', initializePersistentUI);
+ 
+</script>
+</body>
+</html>
