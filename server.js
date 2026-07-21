@@ -696,9 +696,12 @@ io.on('connection', (socket) => {
     broadcastState();
   });
  
-  socket.on('message', (text) => {
+  socket.on('message', (payload) => {
     const info = connected[socket.id];
-    if (!info || !text || !text.trim()) return;
+    if (!info) return;
+    const text = typeof payload === 'string' ? payload : (payload && payload.text);
+    const ooc = !!(payload && typeof payload === 'object' && payload.ooc);
+    if (!text || !text.trim()) return;
     const characters = loadCharacters();
     const char = characters.find((c) => c.name === info.characterName) || {};
     io.emit('message', {
@@ -707,9 +710,10 @@ io.on('connection', (socket) => {
       emoji: char.emoji || '💬',
       color: char.color || '#444',
       text: text.trim(),
+      ooc,
       time: Date.now(),
     });
-    recordEvent('message', `${info.characterName} (${info.playerName}): ${text.trim()}`);
+    recordEvent('message', `${ooc ? '[OOC] ' : ''}${info.characterName} (${info.playerName}): ${text.trim()}`);
   });
  
   socket.on('roll', ({ min, max, label }) => {
