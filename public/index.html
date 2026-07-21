@@ -292,6 +292,53 @@ header {
   font-size: 14px;
 }
 .msg.mine .bubble { background: #ecf4ec; border-color: #b8d9b8; border-radius: 10px 0 10px 10px; }
+.ooc-badge {
+  background: var(--border);
+  color: var(--ink-mid);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.msg .bubble.ooc {
+  font-style: italic;
+  background: var(--parchment-dark);
+  color: var(--ink-mid);
+}
+.md-code {
+  background: rgba(0,0,0,0.07);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+.md-codeblock {
+  background: rgba(0,0,0,0.07);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  overflow-x: auto;
+  margin: 4px 0;
+}
+.md-spoiler {
+  background: #545861;
+  color: transparent;
+  border-radius: 3px;
+  padding: 0 2px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.md-spoiler.revealed { background: rgba(0,0,0,0.08); color: inherit; cursor: text; }
+.md-quote {
+  display: block;
+  border-left: 3px solid var(--border);
+  padding-left: 8px;
+  color: var(--ink-mid);
+  margin: 2px 0;
+}
 .system-msg {
   text-align: center;
   color: var(--ink-light);
@@ -424,12 +471,23 @@ header {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px;
-  max-height: 68vh;
   overflow: auto;
   display: flex;
   justify-content: center;
 }
-#pdfCanvas { max-width: 100%; height: auto; box-shadow: var(--shadow); background: white; }
+.pdf-page { position: relative; display: inline-block; line-height: 0; }
+#pdfCanvas { display: block; box-shadow: var(--shadow); background: white; }
+.pdf-link-layer { position: absolute; top: 0; left: 0; }
+.pdf-link-layer a {
+  position: absolute;
+  display: block;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.pdf-link-layer a:hover {
+  background: rgba(122,158,125,0.25);
+  outline: 1px solid rgba(122,158,125,0.7);
+}
 .map-wrap {
   background: var(--parchment-dark);
   border: 1px solid var(--border);
@@ -1101,7 +1159,12 @@ header {
           <button class="btn-secondary pdf-btn" onclick="pdfZoom(-0.2)">−</button>
           <button class="btn-secondary pdf-btn" onclick="pdfZoom(0.2)">+</button>
         </div>
-        <div class="pdf-canvas-wrap"><canvas id="pdfCanvas"></canvas></div>
+        <div class="pdf-canvas-wrap">
+          <div class="pdf-page" id="pdfPage">
+            <canvas id="pdfCanvas"></canvas>
+            <div class="pdf-link-layer" id="pdfLinkLayer"></div>
+          </div>
+        </div>
       </div>
       <div id="rulebookError" class="form-error"></div>
     </div>
@@ -1231,6 +1294,8 @@ header {
         <button class="full-btn secondary" onclick="rollOracle('heartEvent')">💌 Heart Event</button>
         <button class="full-btn secondary" onclick="rollOracle('requests')">🙏 Townie Request</button>
         <button class="full-btn secondary" onclick="rollOracle('date')">📅 Random Date</button>
+        <button class="full-btn secondary" onclick="rollOracle('topic')">💬 Conversation Topic</button>
+        <button class="full-btn secondary" onclick="rollOracle('npc')">🎭 Who Plays the NPC?</button>
  
         <h4>Townies</h4>
         <button class="full-btn secondary" onclick="rollOracle('ancestry')">🐾 Ancestry / Species</button>
@@ -1273,7 +1338,7 @@ header {
   <div id="main">
     <div id="messages"></div>
     <div id="composer">
-      <textarea id="textInput" placeholder="Say something in character… (Enter to send, Shift+Enter for new line)"></textarea>
+      <textarea id="textInput" placeholder="Say something in character… (Enter to send, Shift+Enter for new line, /ooc for out-of-character)"></textarea>
       <button id="sendBtn">Send</button>
     </div>
   </div>
@@ -1516,7 +1581,9 @@ const ORACLES = {
   plushieFeature: ["Normal","Buttons for Eyes","Extra Soft","Pattern / Theme","Reversible","Sings when Hugged"],
   creatureSize: ["Tiny","Small","Medium","Large","Huge"],
   creaturePurpose: ["Gives Transportation","Helps with Chores","Hunts or Forages","Produces Crop","Produces Eggs","Produces Honey","Produces Milk","Produces Mineral","Produces Other","Produces Wool"],
-  creatureFeature: ["Has a Beak","Has a Crest","Has a Mane","Has a Pouch","Has a Shell","Has a Snout","Has a Tail","Has Antenna","Has Antlers","Has Claws","Has Dexterous fingers","Has Fangs","Has Feathers","Has Fins","Has Flippers","Has Floppy Ears","Has four leg-like appendages","Has Fur","Has Gills","Has Hooves","Has Horns","Has Multiple Tails","Has Pattern","Has Pinches","Has Pointed ears","Has Scales","Has six or more leg-like appendages","Has Spines","Has Talons","Has Tentacles","Has Trunk","Has Tusks","Has two arm-like appendages","Has two leg-like appendages","Has Vines","Has Whiskers","Has Wings","Is Bird-Like","Is Brightly Colored","Is Bug-Like","Is Cat-Like","Is Cow-Like","Is Dog-Like","Is Fish-Like","Is Lizard-Like","Is Mouse-like","Is Plant-like","Is Slime-Like","Is Snake-Like","Is Spider-Like"]
+  creatureFeature: ["Has a Beak","Has a Crest","Has a Mane","Has a Pouch","Has a Shell","Has a Snout","Has a Tail","Has Antenna","Has Antlers","Has Claws","Has Dexterous fingers","Has Fangs","Has Feathers","Has Fins","Has Flippers","Has Floppy Ears","Has four leg-like appendages","Has Fur","Has Gills","Has Hooves","Has Horns","Has Multiple Tails","Has Pattern","Has Pinches","Has Pointed ears","Has Scales","Has six or more leg-like appendages","Has Spines","Has Talons","Has Tentacles","Has Trunk","Has Tusks","Has two arm-like appendages","Has two leg-like appendages","Has Vines","Has Whiskers","Has Wings","Is Bird-Like","Is Brightly Colored","Is Bug-Like","Is Cat-Like","Is Cow-Like","Is Dog-Like","Is Fish-Like","Is Lizard-Like","Is Mouse-like","Is Plant-like","Is Slime-Like","Is Snake-Like","Is Spider-Like"],
+  topicPrompt: ["What's everyone's honest opinion on ___?","Nobody wants to admit it, but ___ is actually kind of great.","If Iron Valley threw a festival dedicated to ___, what would it look like?","What's the worst possible thing to bring to a potluck: ___.","Rumor has it the mayor is secretly obsessed with ___.","What's a childhood memory involving ___?","Would your character trade the farm for ___?","The town gossip says someone's been sneaking around at night because of ___.","What's the most \"Iron Valley\" thing about ___?","If your character had unlimited money, they'd spend it all on ___.","Confess: what's your character's guilty pleasure involving ___?","What's a hill your character would die on regarding ___?","The Spirit of the Forest has strong feelings about ___.","What's something from back home your character misses more than ___?","If a shop in town only sold ___, would it survive a single season?","What's the most underrated thing about ___?","Someone just challenged your character to a duel over ___.","What's a weird family tradition involving ___?","If your character could banish one thing from Iron Valley forever, would it be ___?","What's the last thing your character lied about — did it involve ___?","Everyone in town has strong opinions about ___ — what's your character's?","What's something your character collects that's basically just ___?","If ___ were a Townie, what would they be like?","What's the pettiest reason to start a rivalry over ___?","Your character just won a ribbon for best ___ — let them brag.","What's a secret talent your character has related to ___?","Tonight's diary entry is mostly going to be about ___.","What would your character trade their prized crop for: ___?","The fortune teller keeps bringing up ___ — what does it mean?","What's a compliment your character would never expect about ___?","At the wedding toast, your character somehow brings up ___.","What's the most chaotic thing that's ever happened because of ___?","Your character just dug up ___ in the field — now what?","What's something mundane your character finds weirdly comforting: ___?","How would your character explain ___ to someone new in town?","What's a rule your character breaks constantly involving ___?","The whole town is talking about ___ — is your character involved?","What's your character's honest first impression of ___?","If your character opened a shop, ___ would be the first thing on the shelf.","What's something you'd never expect to see at the Iron Valley market: ___?","What's a compromise your character would never make, even for ___?","Your character's love language is apparently ___.","What's a secret your character would only tell someone over ___?","If your character had a theme song, it would somehow be about ___.","What's the most embarrassing thing your character owns related to ___?"],
+  topicFill: ["pumpkins","the mines","gossip","the full moon","chickens","the old well","love letters","a haunted scarecrow","fresh bread","the town clock tower","a lost cat","moonflowers","a suspicious stranger","homemade jam","the harvest festival","muddy boots","a broken fence","secret admirers","the general store","a talking crow","family recipes","the river","a cursed hat","spare buttons","old love songs","the blacksmith's forge","a runaway goat","midnight snacks","the fortune teller's tent","unpaid debts","a suspiciously good mood","the mayor's garden","hand-me-down clothes","an unlabeled potion","the neighbor's dog","bad weather predictions","a locked chest","childhood crushes","the town gossip network","a mysterious itch","leftover stew","the community bulletin board","an awkward silence","a competitive baking contest","the forest at night","someone's ex","a suspicious amount of eggs","the last train out of town","a broken promise","hand-knitted sweaters","the abandoned mine shaft","a rival farm","unsolicited advice","the town well's echo","a lucky coin","someone's diary","the smell of rain","a very opinionated rooster","the annual pie contest","spilled milk (literally)","a suspicious new neighbor","the last slice of cake","an old grudge","a wandering merchant","the moon's phases","terrible cooking","a stray sheep","the town's one working streetlamp","everyone's business but your own","a half-finished quilt","the fear of small talk","a jar of pickled something","the market's weird vendor","a raccoon in the pantry","three-day-old bread","the neighbor's suspiciously large pumpkin"]
 };
  
 function rng(arr) {
@@ -1591,6 +1658,28 @@ function rollOracle(type) {
     result = `${rng(ORACLES.creatureSize)} creature — ${rng(ORACLES.creaturePurpose)}`;
     sub = rng(ORACLES.creatureFeature);
     socket.emit('oracleRoll', { type: 'Creature Creator', result, detail: sub });
+  } else if (type === 'topic') {
+    const prompt = rng(ORACLES.topicPrompt);
+    const fill = rng(ORACLES.topicFill);
+    result = prompt.replace('___', fill);
+    sub = `🂠 prompt: "${prompt}"  +  🂡 fill: "${fill}"`;
+    socket.emit('oracleRoll', { type: 'Conversation Topic', result, detail: sub });
+  } else if (type === 'npc') {
+    const onlinePlayers = (charactersData || []).filter(c => c.claimedBy);
+    const availableNpcs = (charactersData || []).filter(c => c.type === 'townie' && !c.claimedBy);
+    if (!onlinePlayers.length) {
+      result = 'Nobody is at the table right now.';
+      sub = '';
+    } else if (!availableNpcs.length) {
+      result = 'Every Townie is already claimed — free one up first.';
+      sub = '';
+    } else {
+      const player = rng(onlinePlayers);
+      const npc = rng(availableNpcs);
+      result = `${player.claimedBy} is voicing ${npc.emoji} ${npc.name} for this scene!`;
+      sub = `(playing as ${player.emoji} ${player.name})`;
+    }
+    socket.emit('oracleRoll', { type: 'Who Plays the NPC?', result, detail: sub });
   } else if (type === 'statArray') {
     const shuffled = [...STATS].sort(() => Math.random() - 0.5);
     result = `+3 ${shuffled[0]}, +2 ${shuffled[1]}/${shuffled[2]}, +1 ${shuffled[3]}/${shuffled[4]}`;
@@ -1747,15 +1836,16 @@ const messagesEl = $('messages');
  
 socket.on('system', text => appendSystem(text));
  
-socket.on('message', ({ characterName, playerName, emoji, color, text }) => {
+socket.on('message', ({ characterName, playerName, emoji, color, text, ooc }) => {
   const wrap = document.createElement('div');
   wrap.className = `msg ${characterName === myCharacter ? 'mine' : ''}`;
   wrap.innerHTML = `
     <div class="who" style="color:${color}">
       ${emoji} ${escHtml(characterName)}
+      ${ooc ? '<span class="ooc-badge">OOC</span>' : ''}
       <span style="color:var(--ink-light);font-weight:400;font-size:11px;">(${escHtml(playerName)})</span>
     </div>
-    <div class="bubble">${escHtml(text)}</div>`;
+    <div class="bubble ${ooc ? 'ooc' : ''}">${renderMarkdown(text)}</div>`;
   messagesEl.appendChild(wrap);
   scrollMessages();
 });
@@ -1797,9 +1887,12 @@ $('textInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
 });
 function sendMsg() {
-  const t = $('textInput').value.trim();
-  if (!t) return;
-  socket.emit('message', t);
+  const raw = $('textInput').value.trim();
+  if (!raw) return;
+  const oocMatch = raw.match(/^\/ooc\s+([\s\S]+)/i);
+  const text = oocMatch ? oocMatch[1].trim() : raw;
+  if (!text) return;
+  socket.emit('message', { text, ooc: !!oocMatch });
   $('textInput').value = '';
 }
  
@@ -1808,6 +1901,52 @@ function escHtml(str) {
   const d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
+}
+
+// ── Discord-style markdown ──────────────────────────────────────
+// Always escape first, then apply formatting to the escaped string —
+// asterisks/backticks/etc. aren't HTML-special so this can't reopen
+// any tags the escape closed.
+function renderMarkdown(rawText) {
+  let html = escHtml(rawText);
+
+  // Fenced code blocks ```like this``` — pulled out first so nothing
+  // inside them gets touched by the other rules.
+  const codeBlocks = [];
+  html = html.replace(/```([\s\S]+?)```/g, (m, code) => {
+    codeBlocks.push(`<pre class="md-codeblock"><code>${code}</code></pre>`);
+    return `\u0000CB${codeBlocks.length - 1}\u0000`;
+  });
+
+  // Inline code `like this`
+  const inlineCode = [];
+  html = html.replace(/`([^`\n]+?)`/g, (m, code) => {
+    inlineCode.push(`<code class="md-code">${code}</code>`);
+    return `\u0000IC${inlineCode.length - 1}\u0000`;
+  });
+
+  // Blockquote lines: "> text"
+  html = html.replace(/(^|\n)&gt; ?([^\n]*)/g, (m, pre, quote) => `${pre}<span class="md-quote">${quote}</span>`);
+
+  // Bold + italic ***text***
+  html = html.replace(/\*\*\*([^*\n]+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  // Bold **text**
+  html = html.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
+  // Underline __text__
+  html = html.replace(/__([^_\n]+?)__/g, '<u>$1</u>');
+  // Italic *text* or _text_
+  html = html.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+  html = html.replace(/(^|[^A-Za-z0-9_])_([^_\n]+?)_(?![A-Za-z0-9_])/g, '$1<em>$2</em>');
+  // Strikethrough ~~text~~
+  html = html.replace(/~~([^~\n]+?)~~/g, '<del>$1</del>');
+  // Spoiler ||text|| — click to reveal
+  html = html.replace(/\|\|([^|\n]+?)\|\|/g, '<span class="md-spoiler" onclick="this.classList.add(\'revealed\')">$1</span>');
+
+  // Restore protected code segments
+  html = html.replace(/\u0000IC(\d+)\u0000/g, (m, i) => inlineCode[+i]);
+  html = html.replace(/\u0000CB(\d+)\u0000/g, (m, i) => codeBlocks[+i]);
+
+  return html;
 }
  
 // ── Quick "default player" slot creation ───────────────────────
@@ -2575,10 +2714,72 @@ async function renderPdfPage() {
     canvas.height = viewport.height;
     await page.render({ canvasContext: ctx, viewport }).promise;
     $('pdfPageInfo').textContent = `Page ${pdfPageNum} / ${pdfDoc.numPages}`;
+    await renderPdfLinkLayer(page, viewport);
   } catch (e) {
     $('rulebookError').textContent = 'Could not render this page.';
   } finally {
     pdfRendering = false;
+  }
+}
+
+async function renderPdfLinkLayer(page, viewport) {
+  const layer = $('pdfLinkLayer');
+  if (!layer) return;
+  layer.innerHTML = '';
+  layer.style.width = viewport.width + 'px';
+  layer.style.height = viewport.height + 'px';
+
+  let annotations = [];
+  try {
+    annotations = await page.getAnnotations();
+  } catch (e) {
+    return;
+  }
+
+  annotations.forEach((annot) => {
+    if (annot.subtype !== 'Link') return;
+    const rect = viewport.convertToViewportRectangle(annot.rect);
+    const x = Math.min(rect[0], rect[2]);
+    const y = Math.min(rect[1], rect[3]);
+    const w = Math.abs(rect[2] - rect[0]);
+    const h = Math.abs(rect[3] - rect[1]);
+
+    const a = document.createElement('a');
+    a.style.left = `${x}px`;
+    a.style.top = `${y}px`;
+    a.style.width = `${w}px`;
+    a.style.height = `${h}px`;
+
+    const url = annot.url || annot.unsafeUrl;
+    if (url) {
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.title = url;
+    } else if (annot.dest) {
+      a.href = 'javascript:void(0)';
+      a.title = 'Jump to page';
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToPdfDest(annot.dest);
+      });
+    } else {
+      return; // no actionable target (e.g. a comment/highlight annotation)
+    }
+    layer.appendChild(a);
+  });
+}
+
+async function goToPdfDest(dest) {
+  if (!pdfDoc) return;
+  try {
+    const explicitDest = typeof dest === 'string' ? await pdfDoc.getDestination(dest) : dest;
+    if (!explicitDest || !explicitDest[0]) return;
+    const pageIndex = await pdfDoc.getPageIndex(explicitDest[0]);
+    pdfPageNum = pageIndex + 1;
+    await renderPdfPage();
+  } catch (e) {
+    // Bad/unsupported internal link target — ignore rather than break the viewer.
   }
 }
  
